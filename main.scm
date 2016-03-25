@@ -1,0 +1,20 @@
+
+(let ((nx 200)
+      (ny 100))
+  (with-output-to-file "test.ppm"
+    (lambda ()
+      (display (format "P3\n ~D ~D\n255\n" nx ny))
+      (let loop-y ((y (- ny 1)))
+        (if (>= y 0)
+            (let loop-x ((x 0))
+              (if (< x nx)
+                  (let* ((r (/ x nx))
+                         (g (/ y ny))
+                         (b 0.2)
+                         (ir (floor->exact (* 255.99 r)))
+                         (ig (floor->exact (* 255.99 g)))
+                         (ib (floor->exact (* 255.99 b))))
+                    (display (format "~D ~D ~D\n"
+                                     ir ig ib))
+                    (loop-x (+ x 1)))
+                  (loop-y (- y 1)))))))))
