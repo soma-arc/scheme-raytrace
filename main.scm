@@ -1,3 +1,9 @@
+(add-load-path "." :relative)
+
+(define-module main
+  (use vec))
+
+(select-module main)
 
 (let ((nx 200)
       (ny 100))
@@ -8,12 +14,10 @@
         (if (>= y 0)
             (let loop-x ((x 0))
               (if (< x nx)
-                  (let* ((r (/ x nx))
-                         (g (/ y ny))
-                         (b 0.2)
-                         (ir (floor->exact (* 255.99 r)))
-                         (ig (floor->exact (* 255.99 g)))
-                         (ib (floor->exact (* 255.99 b))))
+                  (let* ((col (make-vec (/ x nx) (/ y ny) 0.2))
+                         (ir (floor->exact (* 255.99 (vec-x col))))
+                         (ig (floor->exact (* 255.99 (vec-y col))))
+                         (ib (floor->exact (* 255.99 (vec-z col)))))
                     (display (format "~D ~D ~D\n"
                                      ir ig ib))
                     (loop-x (+ x 1)))
