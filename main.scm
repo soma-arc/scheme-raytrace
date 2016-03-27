@@ -1,9 +1,11 @@
 (add-load-path "." :relative)
 
 (define-module main
-  (use vec))
+  (use vec :prefix v:))
 
 (select-module main)
+
+(v:make-vec 1 2 3)
 
 (let ((nx 200)
       (ny 100))
