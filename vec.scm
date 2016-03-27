@@ -66,7 +66,7 @@
 
 (define (unit v)
   (let ((k (/ 1 (length v))))
-    (prod v k)))
+    (scale v k)))
 
 (define (dot v1 v2)
   (+ (* (x v1) (x v2))
