@@ -14,3 +14,4 @@
 (define (point-at-parameter ray t)
   (v:sum (origin ray)
          (v:scale (dir ray) t)))
+

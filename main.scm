@@ -2,25 +2,24 @@
 
 (define-module main
   (use vec :prefix v:)
-  (use ray))
+  (use ray)
+  (use geometry :prefix g:))
 
 (select-module main)
 
-(define (hit-sphere center rad r)
-  (let* ((oc (v:diff (origin r) center))
-         (a (v:dot (dir r) (dir r)))
-         (b (* 2 (v:dot oc (dir r))))
-         (c (- (v:dot oc oc) (* rad rad)))
-         (discriminant (- (* b b) (* 4 a c))))
-    (> discriminant 0)))
+(define +max-float+ 999999999999)
 
-(define (color r)
-  (if (hit-sphere (v:vec3 0 0 -1) 0.5 r)
-      (v:vec3 1 0 0)
-      (let* ((unit-dir (v:unit (dir r)))
-             (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
-        (v:sum (v:scale (v:vec3 1 1 1) (- 1 t))
-               (v:scale (v:vec3 0.5 0.7 1.0) t)))))
+(define (color r obj-list)
+  (receive (hit? hit-rec)
+           (g:calc-nearest obj-list r 0.0 +max-float+)
+           (if hit?
+               (v:scale (v:sum (g:normal hit-rec)
+                               (v:vec3 1 1 1))
+                        0.5)
+               (let* ((unit-dir (v:unit (dir r)))
+                      (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
+                 (v:sum (v:scale (v:vec3 1 1 1) (- 1 t))
+                        (v:scale (v:vec3 0.5 0.7 1.0) t))))))
 
 
 (let ((nx 200)
@@ -28,7 +27,13 @@
       (lower-left-corner (v:vec3 -2 -1 -1))
       (horizontal (v:vec3 4 0 0))
       (vertical (v:vec3 0 2 0))
-      (origin (v:vec3 0 0 0)))
+      (origin (v:vec3 0 0 0))
+      (obj-list (list (make g:<sphere>
+                        :center (v:vec3 0 0 -1)
+                        :radius 0.5)
+                      (make g:<sphere>
+                        :center (v:vec3 0 -100.5 -1)
+                        :radius 100))))
   (with-output-to-file "test.ppm"
     (lambda ()
       (display (format "P3\n ~D ~D\n255\n" nx ny))
@@ -42,7 +47,7 @@
                                         (v:sum lower-left-corner
                                                (v:scale horizontal u)
                                                (v:scale vertical v))))
-                         (col (color ray))
+                         (col (color ray obj-list))
                          (ir (floor->exact (* 255.99 (v:x col))))
                          (ig (floor->exact (* 255.99 (v:y col))))
                          (ib (floor->exact (* 255.99 (v:z col)))))
