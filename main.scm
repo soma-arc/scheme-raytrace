@@ -2,8 +2,10 @@
 
 (define-module main
   (use vec :prefix v:)
+  (use srfi-27)
   (use ray)
-  (use geometry :prefix g:))
+  (use geometry :prefix g:)
+  (use camera))
 
 (select-module main)
 
@@ -24,10 +26,8 @@
 
 (let ((nx 200)
       (ny 100)
-      (lower-left-corner (v:vec3 -2 -1 -1))
-      (horizontal (v:vec3 4 0 0))
-      (vertical (v:vec3 0 2 0))
-      (origin (v:vec3 0 0 0))
+      (ns 10)
+      (camera (make <camera>))
       (obj-list (list (make g:<sphere>
                         :center (v:vec3 0 0 -1)
                         :radius 0.5)
@@ -41,17 +41,21 @@
         (if (>= y 0)
             (let loop-x ((x 0))
               (if (< x nx)
-                  (let* ((u (/ x nx))
-                         (v (/ y ny))
-                         (ray (make-ray origin
-                                        (v:sum lower-left-corner
-                                               (v:scale horizontal u)
-                                               (v:scale vertical v))))
-                         (col (color ray obj-list))
-                         (ir (floor->exact (* 255.99 (v:x col))))
-                         (ig (floor->exact (* 255.99 (v:y col))))
-                         (ib (floor->exact (* 255.99 (v:z col)))))
+                  (let* ((c (let loop ((sample-count 0)
+                                       (col (v:vec3 0 0 0)))
+                              (if (>= sample-count ns)
+                                  (v:quot col (v:vec3 ns ns ns))
+                                  (let* ((u (/ (+ x (random-real)) nx))
+                                         (v (/ (+ y (random-real)) ny))
+                                         (ray (get-ray camera u v))
+                                         (col (v:sum col
+                                                     (color ray obj-list))))
+                                    (loop (+ 1 sample-count) col)))))
+                         (ir (floor->exact (* 255.99 (v:x c))))
+                         (ig (floor->exact (* 255.99 (v:y c))))
+                         (ib (floor->exact (* 255.99 (v:z c)))))
                     (display (format "~D ~D ~D\n"
                                      ir ig ib))
                     (loop-x (+ x 1)))
                   (loop-y (- y 1)))))))))
+

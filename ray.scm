@@ -1,5 +1,3 @@
-(add-load-path "." :relative)
-
 (define-module ray
   (use gauche.record)
   (use vec :prefix v:)
