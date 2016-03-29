@@ -11,17 +11,35 @@
 
 (define +max-float+ 999999999999)
 
-(define (color r obj-list)
-  (receive (hit? hit-rec)
-           (g:calc-nearest obj-list r 0.0 +max-float+)
-           (if hit?
-               (v:scale (v:sum (g:normal hit-rec)
-                               (v:vec3 1 1 1))
-                        0.5)
-               (let* ((unit-dir (v:unit (dir r)))
-                      (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
-                 (v:sum (v:scale (v:vec3 1 1 1) (- 1 t))
-                        (v:scale (v:vec3 0.5 0.7 1.0) t))))))
+(define (random-in-unit-sphere)
+  (let loop ((p (v:scale (v:diff (v:vec3 (random-real) (random-real) (random-real))
+                                 (v:vec3 1 1 1))
+                          2)))
+    (if (< (v:sq-len p) 1)
+        p
+        (loop (v:scale (v:diff (v:vec3 (random-real) (random-real) (random-real))
+                              (v:vec3 1 1 1))
+                       2)))))
+
+(define +max-depth+ 3)
+
+(define (color r obj-list depth)
+  (if (> depth +max-depth+)
+      (v:vec3 0 0 0)
+      (receive (hit? hit-rec)
+               (g:calc-nearest obj-list r 0.0 +max-float+)
+               (if hit?
+                   (let ((target (v:sum (g:p hit-rec)
+                                        (g:normal hit-rec)
+                                        (random-in-unit-sphere))))
+                     (v:scale (color (make-ray (g:p hit-rec)
+                                               (v:diff target (g:p hit-rec)))
+                                     obj-list (+ depth 1))
+                              0.5))
+                   (let* ((unit-dir (v:unit (dir r)))
+                          (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
+                     (v:sum (v:scale (v:vec3 1 1 1) (- 1 t))
+                            (v:scale (v:vec3 0.5 0.7 1.0) t)))))))
 
 
 (let ((nx 200)
@@ -49,8 +67,9 @@
                                          (v (/ (+ y (random-real)) ny))
                                          (ray (get-ray camera u v))
                                          (col (v:sum col
-                                                     (color ray obj-list))))
+                                                     (color ray obj-list 0))))
                                     (loop (+ 1 sample-count) col)))))
+                         (c (v:vec3 (sqrt (v:x c)) (sqrt (v:y c)) (sqrt (v:z c))))
                          (ir (floor->exact (* 255.99 (v:x c))))
                          (ig (floor->exact (* 255.99 (v:y c))))
                          (ib (floor->exact (* 255.99 (v:z c)))))
