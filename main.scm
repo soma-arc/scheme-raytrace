@@ -3,25 +3,17 @@
 (define-module main
   (use vec :prefix v:)
   (use srfi-27)
+  (use util)
   (use ray)
   (use geometry :prefix g:)
+  (use material :prefix m:)
   (use camera))
 
 (select-module main)
 
 (define +max-float+ 999999999999)
 
-(define (random-in-unit-sphere)
-  (let loop ((p (v:scale (v:diff (v:vec3 (random-real) (random-real) (random-real))
-                                 (v:vec3 1 1 1))
-                          2)))
-    (if (< (v:sq-len p) 1)
-        p
-        (loop (v:scale (v:diff (v:vec3 (random-real) (random-real) (random-real))
-                              (v:vec3 1 1 1))
-                       2)))))
-
-(define +max-depth+ 3)
+(define +max-depth+ 5)
 
 (define (color r obj-list depth)
   (if (> depth +max-depth+)
@@ -29,13 +21,11 @@
       (receive (hit? hit-rec)
                (g:calc-nearest obj-list r 0.0 +max-float+)
                (if hit?
-                   (let ((target (v:sum (g:p hit-rec)
-                                        (g:normal hit-rec)
-                                        (random-in-unit-sphere))))
-                     (v:scale (color (make-ray (g:p hit-rec)
-                                               (v:diff target (g:p hit-rec)))
-                                     obj-list (+ depth 1))
-                              0.5))
+                   (receive (valid? scattered attenuation)
+                            (m:scatter (g:material hit-rec) r hit-rec)
+                            (if valid?
+                                (v:prod attenuation (color scattered obj-list (+ depth 1)))
+                                (v:vec3 0 0 0)))
                    (let* ((unit-dir (v:unit (dir r)))
                           (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
                      (v:sum (v:scale (v:vec3 1 1 1) (- 1 t))
@@ -48,10 +38,26 @@
       (camera (make <camera>))
       (obj-list (list (make g:<sphere>
                         :center (v:vec3 0 0 -1)
-                        :radius 0.5)
+                        :radius 0.5
+                        :material (make m:<lambertian>
+                                    :albedo (v:vec3 0.8 0.3 0.3)))
                       (make g:<sphere>
                         :center (v:vec3 0 -100.5 -1)
-                        :radius 100))))
+                        :radius 100
+                        :material (make m:<lambertian>
+                                    :albedo (v:vec3 0.8 0.8 0)))
+                      (make g:<sphere>
+                        :center (v:vec3 1 0 -1)
+                        :radius 0.5
+                        :material (make m:<metal>
+                                    :albedo (v:vec3 0.8 0.6 0.2)
+                                    :fuzz 1.0))
+                      (make g:<sphere>
+                        :center (v:vec3 -1 0 -1)
+                        :radius 0.5
+                        :material (make m:<metal>
+                                    :albedo (v:vec3 0.8 0.8 0.8)
+                                    :fuzz 0.3)))))
   (with-output-to-file "test.ppm"
     (lambda ()
       (display (format "P3\n ~D ~D\n255\n" nx ny))

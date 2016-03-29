@@ -2,14 +2,10 @@
   (use gauche.record)
   (use vec :prefix v:)
   (use ray)
+  (use material :prefix m:)
   (export-all))
 
 (select-module geometry)
-
-(define-record-type hit-record #t #t
-  (t t t-set!)
-  (p p p-set!)
-  (normal normal normal-set!))
 
 (define-class <sphere> ()
   ((center :init-value (v:vec3 0 0 0)
@@ -17,7 +13,10 @@
            :accessor center)
    (radius :init-value 0
            :init-keyword :radius
-           :accessor radius)))
+           :accessor radius)
+   (material :init-value (make m:<lambertian> :albedo (v:vec3 1 1 1))
+             :init-keyword :material
+             :accessor material)))
 
 (define-method hit ((s <sphere>) r t-min t-max)
   (let* ((oc (v:diff (origin r) (center s)))
@@ -33,14 +32,14 @@
               (let* ((p (point-at-parameter r temp))
                      (normal (v:scale (v:diff p (center s))
                                       (/ 1 (radius s)))))
-                (values #t (make-hit-record temp p normal)))
+                (values #t (make-hit-record temp p normal (material s))))
               (let ((temp (/ (+ (- b) (sqrt discriminant))
                              a)))
                 (if (< t-min temp t-max)
                     (let* ((p (point-at-parameter r temp))
                            (normal (v:scale (v:diff p (center s))
                                             (/ 1 (radius s)))))
-                      (values #t (make-hit-record temp p normal)))
+                      (values #t (make-hit-record temp p normal (material s))))
                     (values #f #f))))))))
 
 (define-method calc-nearest (obj-list r t-min t-max)
@@ -61,3 +60,4 @@
                            hit-anything
                            closest-so-far
                            rec))))))
+

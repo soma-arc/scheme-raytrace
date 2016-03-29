@@ -1,7 +1,7 @@
 (define-module camera
- (use vec :prefix v:)
- (use ray)
- (export-all))
+  (use vec :prefix v:)
+  (use ray)
+  (export-all))
 
 (select-module camera)
 

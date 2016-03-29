@@ -13,3 +13,8 @@
   (v:sum (origin ray)
          (v:scale (dir ray) t)))
 
+(define-record-type hit-record #t #t
+  (t t t-set!)
+  (p p p-set!)
+  (normal normal normal-set!)
+  (material material material-set!))
