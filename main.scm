@@ -13,7 +13,7 @@
 
 (define +max-float+ 999999999999)
 
-(define +max-depth+ 5)
+(define +max-depth+ 50)
 
 (define (color r obj-list depth)
   (if (> depth +max-depth+)
@@ -40,7 +40,7 @@
                         :center (v:vec3 0 0 -1)
                         :radius 0.5
                         :material (make m:<lambertian>
-                                    :albedo (v:vec3 0.8 0.3 0.3)))
+                                    :albedo (v:vec3 0.1 0.2 0.5)))
                       (make g:<sphere>
                         :center (v:vec3 0 -100.5 -1)
                         :radius 100
@@ -55,9 +55,13 @@
                       (make g:<sphere>
                         :center (v:vec3 -1 0 -1)
                         :radius 0.5
-                        :material (make m:<metal>
-                                    :albedo (v:vec3 0.8 0.8 0.8)
-                                    :fuzz 0.3)))))
+                        :material (make m:<dielectric>
+                                    :ref-idx 1.5))
+                      (make g:<sphere>
+                        :center (v:vec3 -1 0 -1)
+                        :radius -0.45
+                        :material (make m:<dielectric>
+                                    :ref-idx 1.5)))))
   (with-output-to-file "test.ppm"
     (lambda ()
       (display (format "P3\n ~D ~D\n255\n" nx ny))
