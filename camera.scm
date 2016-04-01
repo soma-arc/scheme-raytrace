@@ -1,5 +1,6 @@
 (define-module camera
   (use vec :prefix v:)
+  (use math.const)
   (use ray)
   (export-all))
 
@@ -18,6 +19,22 @@
    (origin :init-value (v:vec3 0 0 0)
            :init-keyword :origin
            :accessor origin)))
+
+(define (cam lookfrom lookat vup vfov aspect)
+  (let* ((theta (* vfov pi/180))
+         (half-height (tan (/ theta 2)))
+         (half-width (* aspect half-height))
+         (w (v:unit (v:diff lookfrom lookat)))
+         (u (v:unit (v:cross vup w)))
+         (v (v:cross w u)))
+    (make <camera>
+      :lower-left-corner (v:diff lookfrom
+                                 (v:scale u half-width)
+                                 (v:scale v half-height)
+                                 w)
+      :horizontal (v:scale u (* 2 half-width))
+      :vertical (v:scale v (* 2 half-height))
+      :origin lookfrom)))
 
 (define (get-ray camera u v)
   (make-ray (origin camera)
