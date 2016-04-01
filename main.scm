@@ -15,6 +15,65 @@
 (define +max-float+ 999999999999)
 (define +max-depth+ 30)
 
+(define (random-scene)
+  (let ((n 300)
+        (obj-list '()))
+    (push! obj-list
+           (make g:<sphere>
+             :center (v:vec3 0 -1000 0) :radius 1000
+             :material (make m:<lambertian>
+                         :albedo (v:vec3 0.5 0.5 0.5))))
+    (let loop-a ((a -1))
+      (if (< a 1)
+          (let loop-b ((b -1))
+            (if (< b 1)
+                (let ((choose-mat (random-real))
+                      (center (v:vec3 (+ a (* 0.9 (random-real)))
+                                      0.2
+                                      (+ b (* 0.9 (random-real))))))
+                  (if (> (v:length (v:diff center (v:vec3 4 0.2 0))) 0.9)
+                      (cond
+                       ((< choose-mat 0.8)
+                        (push! obj-list
+                               (make g:<sphere>
+                                 :center center :radius 0.2
+                                 :material (make m:<lambertian>
+                                             :albedo (v:vec3 (* (random-real) (random-real))
+                                                             (* (random-real) (random-real))
+                                                             (* (random-real) (random-real)))))))
+                       ((< choose-mat 0.95)
+                        (push! obj-list
+                               (make g:<sphere>
+                                 :center center :radius 0.2
+                                 :material (make m:<metal>
+                                             :albedo (v:vec3 (* 0.5 (+ 1 (random-real)))
+                                                             (* 0.5 (+ 1 (random-real)))
+                                                             (* 0.5 (+ 1 (random-real))))
+                                             :fuzz (* 0.5 (random-real))))))
+                       (else (push! obj-list
+                                    (make g:<sphere>
+                                      :center center :radius 0.2
+                                      :material (make m:<dielectric>
+                                                  :ref-idx 1.5))))))
+                  (loop-b (inc! b)))
+                (loop-a (inc! a))))))
+    (push! obj-list
+           (make g:<sphere>
+             :center (v:vec3 0 1 0) :radius 11
+             :material (make m:<dielectric>
+                         :ref-idx 1.5)))
+    (push! obj-list
+           (make g:<sphere>
+             :center (v:vec3 -4 1 0) :radius 1
+             :material (make m:<lambertian>
+                         :albedo (v:vec3 0.4 0.2 0.1))))
+    (push! obj-list
+           (make g:<sphere>
+             :center (v:vec3 4 1 0) :radius 1
+             :material (make m:<metal>
+                         :albedo (v:vec3 0.7 0.6 0.5)
+                         :fuzz 0)))))
+
 (define (color r obj-list depth)
   (if (> depth +max-depth+)
       (v:vec3 0 0 0)
