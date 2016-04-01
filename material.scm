@@ -17,7 +17,7 @@
 (define-method scatter ((m <lambertian>) ray hit-rec)
   (let ((target (v:sum (p hit-rec)
                        (normal hit-rec)
-                       (random-in-unit-sphere))))
+                       (random-dir-over-hemisphere (normal hit-rec)))))
     (values #t
             (make-ray (p hit-rec) (v:diff target (p hit-rec)))
             (albedo m))))
