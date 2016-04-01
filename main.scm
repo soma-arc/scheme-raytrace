@@ -13,7 +13,6 @@
 (select-module main)
 
 (define +max-float+ 999999999999)
-
 (define +max-depth+ 30)
 
 (define (color r obj-list depth)
@@ -35,10 +34,17 @@
 
 (let* ((nx 200)
        (ny 100)
-       (ns 3)
-       (camera (cam (v:vec3 -2 2 1)
-                    (v:vec3 0 0 -1)
-                    (v:vec3 0 1 0) 45 (/ nx ny)))
+       (ns 10)
+       (lookfrom (v:vec3 3 3 2))
+       (lookat (v:vec3 0 0 -1))
+       (aperture 2.0)
+       (dist-to-focus (v:length (v:diff lookfrom lookat)))
+       (camera (cam-with-lens lookfrom
+                              lookat
+                              (v:vec3 0 1 0)
+                              20 (/ nx ny)
+                              aperture
+                              dist-to-focus))
        (R (cos pi/4))
        (obj-list
         (list (make g:<sphere>
@@ -80,7 +86,7 @@
                                   (v:quot col (v:vec3 ns ns ns))
                                   (let* ((u (/ (+ x (random-real)) nx))
                                          (v (/ (+ y (random-real)) ny))
-                                         (ray (get-ray camera u v))
+                                         (ray (get-ray-with-lens camera u v))
                                          (col (v:sum col
                                                      (color ray obj-list 0))))
                                     (loop (+ 1 sample-count) col)))))
