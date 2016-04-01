@@ -5,16 +5,30 @@
 
 (select-module ray)
 
-(define-record-type ray #t #t
-  (origin origin origin-set!)
-  (dir dir dir-set!))
+(define-inline (make-ray origin dir)
+  (vector origin dir))
+
+(define-inline (origin ray)
+  (vector-ref ray 0))
+
+(define-inline (dir ray)
+  (vector-ref ray 1))
 
 (define (point-at-parameter ray t)
   (v:sum (origin ray)
          (v:scale (dir ray) t)))
 
-(define-record-type hit-record #t #t
-  (t t t-set!)
-  (p p p-set!)
-  (normal normal normal-set!)
-  (material material material-set!))
+(define-inline (make-hit-record t p normal material)
+  (vector t p normal material))
+
+(define-inline (t hit-rec)
+  (vector-ref hit-rec 0))
+
+(define-inline (p hit-rec)
+  (vector-ref hit-rec 1))
+
+(define-inline (normal hit-rec)
+  (vector-ref hit-rec 2))
+
+(define-inline (material hit-rec)
+  (vector-ref hit-rec 3))
