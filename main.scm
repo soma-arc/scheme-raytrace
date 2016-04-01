@@ -81,7 +81,7 @@
                (g:calc-nearest obj-list r 0.0 +max-float+)
                (if hit?
                    (receive (valid? scattered attenuation)
-                            (m:scatter (g:material hit-rec) r hit-rec)
+                            (m:scatter (material hit-rec) r hit-rec)
                             (if valid?
                                 (v:prod attenuation (color scattered obj-list (+ depth 1)))
                                 (v:vec3 0 0 0)))
