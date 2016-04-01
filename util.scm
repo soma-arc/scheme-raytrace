@@ -6,11 +6,9 @@
 (select-module util)
 
 (define (random-in-unit-sphere)
-  (let loop ((p (v:scale (v:diff (v:vec3 (random-real) (random-real) (random-real))
-                                 (v:vec3 1 1 1))
-                         2)))
+  (let loop ((p (v:diff (v:scale (v:vec3 (random-real) (random-real) (random-real)) 2)
+                        (v:vec3 1 1 1))))
     (if (< (v:sq-len p) 1)
         p
-        (loop (v:scale (v:diff (v:vec3 (random-real) (random-real) (random-real))
-                               (v:vec3 1 1 1))
-                       2)))))
+        (loop (v:diff (v:scale (v:vec3 (random-real) (random-real) (random-real)) 2)
+                      (v:vec3 1 1 1))))))
