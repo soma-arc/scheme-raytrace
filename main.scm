@@ -15,6 +15,9 @@
 (define +max-float+ 999999999999)
 (define +max-depth+ 30)
 
+(define +black+ (v:vec3 0 0 0))
+(define +white+ (v:vec3 1 1 1))
+
 (define (random-scene)
   (let ((n 300)
         (obj-list '()))
@@ -69,21 +72,28 @@
             (v:vec3 4 1 0) 1
             (m:make-metal (v:vec3 0.7 0.6 0.5) 0)))))
 
-(define (color r obj-list depth)
-  (if (> depth +max-depth+)
-      (v:vec3 0 0 0)
-      (receive (hit? hit-rec)
-               (g:calc-nearest obj-list r 0.0 +max-float+)
-               (if hit?
-                   (receive (valid? scattered attenuation)
-                            (m:scatter (material hit-rec) r hit-rec)
-                            (if valid?
-                                (v:prod attenuation (color scattered obj-list (+ depth 1)))
-                                (v:vec3 0 0 0)))
-                   (let* ((unit-dir (v:unit (dir r)))
-                          (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
-                     (v:sum (v:scale (v:vec3 1 1 1) (- 1 t))
-                            (v:scale (v:vec3 0.5 0.7 1.0) t)))))))
+(define (sky-color t)
+  (v:sum (v:scale +white+ (- 1 t))
+         (v:scale (v:vec3 0.5 0.7 1.0) t)))
+
+(define (color r obj-list)
+  (letrec ((col
+            (lambda (r obj-list depth acc)
+              (if (> depth +max-depth+)
+                  +black+
+                  (receive (hit? hit-rec)
+                           (g:calc-nearest obj-list r 0.0 +max-float+)
+                           (if hit?
+                               (receive (valid? scattered attenuation)
+                                        (m:scatter (material hit-rec) r hit-rec)
+                                        (if valid?
+                                            (col scattered obj-list (inc! depth)
+                                                 (v:prod acc attenuation))
+                                            +black+))
+                               (let* ((unit-dir (v:unit (dir r)))
+                                      (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
+                                 (v:prod acc (sky-color t)))))))))
+    (col r obj-list 0 +white+)))
 
 
 (time (let* ((nx 200)
@@ -131,14 +141,14 @@
                                                (v (/ (+ y (random-real)) ny))
                                                (ray (get-ray camera u v))
                                                (col (v:sum col
-                                                           (color ray obj-list 0))))
-                                          (loop (+ 1 sample-count) col)))))
+                                                           (color ray obj-list))))
+                                          (loop (inc! sample-count) col)))))
                                (c (v:vec3 (sqrt (v:x c)) (sqrt (v:y c)) (sqrt (v:z c))))
                                (ir (floor->exact (* 255.99 (v:x c))))
                                (ig (floor->exact (* 255.99 (v:y c))))
                                (ib (floor->exact (* 255.99 (v:z c)))))
                           (display (format "~D ~D ~D\n"
                                            ir ig ib))
-                          (loop-x (+ x 1)))
-                        (loop-y (- y 1))))))))))
+                          (loop-x (inc! x)))
+                        (loop-y (dec! y))))))))))
 
