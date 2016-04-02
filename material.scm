@@ -35,7 +35,8 @@
                                                         fuzz)))))
               (values (> (v:dot (dir scattered) (normal hit-rec)) 0)
                       scattered
-                      albedo)))))
+                      albedo)))
+          albedo fuzz))
 
 (define (refract v n ni-over-nt)
   (let* ((uv (v:unit v))
@@ -69,7 +70,7 @@
                                (/ (* dd ref-idx) (v:length (dir ray)))
                                (/ (- dd) (v:length (dir ray))))))
               (receive (valid? refracted)
-                       (refract (dir ray) (normal hit-rec) ni-over-nt)
+                       (refract (dir ray) outward-normal ni-over-nt)
                        (let* ((refract-prob (if valid?
                                                 (schlick cosine ref-idx)
                                                 1))
