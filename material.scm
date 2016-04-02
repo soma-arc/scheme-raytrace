@@ -71,10 +71,10 @@
                                (/ (- dd) (v:length (dir ray))))))
               (receive (valid? refracted)
                        (refract (dir ray) outward-normal ni-over-nt)
-                       (let* ((refract-prob (if valid?
+                       (let* ((reflect-prob (if valid?
                                                 (schlick cosine ref-idx)
                                                 1))
-                              (scattered (if (< (random-real) refract-prob)
+                              (scattered (if (< (random-real) reflect-prob)
                                              (make-ray (p hit-rec) reflected)
                                              (make-ray (p hit-rec) refracted))))
                          (values #t scattered attenuation)))))
