@@ -21,8 +21,8 @@
     (push! obj-list
            (g:make-sphere
             (v:vec3 0 -1000 0) 1000
-            (make m:<lambertian>
-              :albedo (v:vec3 0.5 0.5 0.5))))
+            (m:make-lambertian
+             (v:vec3 0.5 0.5 0.5))))
     (let loop-a ((a -1))
       (if (< a 1)
           (let loop-b ((b -1))
@@ -37,37 +37,37 @@
                         (push! obj-list
                                (g:make-sphere
                                 center 0.2
-                                (make m:<lambertian>
-                                  :albedo (v:vec3 (* (random-real) (random-real))
-                                                  (* (random-real) (random-real))
-                                                  (* (random-real) (random-real)))))))
+                                (m:make-lambertian
+                                 (v:vec3 (* (random-real) (random-real))
+                                         (* (random-real) (random-real))
+                                         (* (random-real) (random-real)))))))
                        ((< choose-mat 0.95)
                         (push! obj-list
                                (g:make-sphere
                                 center 0.2
-                                (make m:<metal>
-                                  :albedo (v:vec3 (* 0.5 (+ 1 (random-real)))
+                                (m:make-metal
+                                  (v:vec3 (* 0.5 (+ 1 (random-real)))
                                                   (* 0.5 (+ 1 (random-real)))
                                                   (* 0.5 (+ 1 (random-real))))
-                                  :fuzz (* 0.5 (random-real))))))
+                                  (* 0.5 (random-real))))))
                        (else (push! obj-list
                                     (g:make-sphere
                                      center 0.2
-                                     (make m:<dielectric> :ref-idx 1.5))))))
+                                     (m:make-dielectric 1.5))))))
                   (loop-b (inc! b)))
                 (loop-a (inc! a))))))
     (push! obj-list
            (g:make-sphere
             (v:vec3 0 1 0) 11
-            (make m:<dielectric> :ref-idx 1.5)))
+            (m:make-dielectric 1.5)))
     (push! obj-list
            (g:make-sphere
             (v:vec3 -4 1 0) 1
-            (make m:<lambertian> :albedo (v:vec3 0.4 0.2 0.1))))
+            (m:make-lambertian (v:vec3 0.4 0.2 0.1))))
     (push! obj-list
            (g:make-sphere
             (v:vec3 4 1 0) 1
-            (make m:<metal> :albedo (v:vec3 0.7 0.6 0.5) :fuzz 0)))))
+            (m:make-metal (v:vec3 0.7 0.6 0.5) 0)))))
 
 (define (color r obj-list depth)
   (if (> depth +max-depth+)
@@ -103,21 +103,19 @@
              (R (cos pi/4))
              (obj-list
               (list (g:make-sphere (v:vec3 0 0 -1) 0.5
-                                   (make m:<lambertian>
-                                     :albedo (v:vec3 0.1 0.2 0.5)))
+                                   (m:make-lambertian
+                                    (v:vec3 0.1 0.2 0.5)))
                     (g:make-sphere (v:vec3 0 -100.5 -1) 100
-                                   (make m:<lambertian>
-                                     :albedo (v:vec3 0.8 0.8 0)))
+                                   (m:make-lambertian
+                                     (v:vec3 0.8 0.8 0)))
                     (g:make-sphere (v:vec3 1 0 -1) 0.5
-                                   (make m:<metal>
-                                     :albedo (v:vec3 0.8 0.6 0.2)
-                                     :fuzz 0.3))
+                                   (m:make-metal
+                                     (v:vec3 0.8 0.6 0.2)
+                                      0.3))
                     (g:make-sphere (v:vec3 -1 0 -1) 0.5
-                                   (make m:<dielectric>
-                                     :ref-idx 1.5))
+                                   (m:make-dielectric 1.5))
                     (g:make-sphere (v:vec3 -1 0 -1) -0.45
-                                   (make m:<dielectric>
-                                     :ref-idx 1.5)))))
+                                   (m:make-dielectric 1.5)))))
         (with-output-to-file "test.ppm"
           (lambda ()
             (display (format "P3\n ~D ~D\n255\n" nx ny))
