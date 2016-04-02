@@ -6,13 +6,19 @@
 (select-module ray)
 
 (define-inline (make-ray origin dir)
-  (vector origin dir))
+  (vector origin dir 0))
+
+(define-inline (make-ray-with-time origin dir time)
+  (vector origin dir time))
 
 (define-inline (origin ray)
   (vector-ref ray 0))
 
 (define-inline (dir ray)
   (vector-ref ray 1))
+
+(define-inline (ray-time ray)
+  (vector-ref ray 2))
 
 (define (point-at-parameter ray t)
   (v:sum (origin ray)

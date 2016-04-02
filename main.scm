@@ -13,7 +13,7 @@
 (select-module main)
 
 (define +max-float+ 999999999999)
-(define +max-depth+ 30)
+(define +max-depth+ 5)
 
 (define +black+ (v:vec3 0 0 0))
 (define +white+ (v:vec3 1 1 1))
@@ -26,10 +26,10 @@
             (v:vec3 0 -1000 0) 1000
             (m:make-lambertian
              (v:vec3 0.5 0.5 0.5))))
-    (let loop-a ((a -1))
-      (if (< a 1)
-          (let loop-b ((b -1))
-            (if (< b 1)
+    (let loop-a ((a -5))
+      (if (< a 5)
+          (let loop-b ((b -5))
+            (if (< b 5)
                 (let ((choose-mat (random-real))
                       (center (v:vec3 (+ a (* 0.9 (random-real)))
                                       0.2
@@ -38,8 +38,9 @@
                       (cond
                        ((< choose-mat 0.8)
                         (push! obj-list
-                               (g:make-sphere
-                                center 0.2
+                               (g:make-moving-sphere
+                                center
+                                (v:sum center (v:vec3 0 (* 0.5 (random-real)) 0)) 0 1 0.2
                                 (m:make-lambertian
                                  (v:vec3 (* (random-real) (random-real))
                                          (* (random-real) (random-real))
@@ -61,7 +62,7 @@
                 (loop-a (inc! a))))))
     (push! obj-list
            (g:make-sphere
-            (v:vec3 0 1 0) 11
+            (v:vec3 0 1 0) 1
             (m:make-dielectric 1.5)))
     (push! obj-list
            (g:make-sphere
@@ -95,24 +96,8 @@
                                  (v:prod acc (sky-color t)))))))))
     (col r obj-list 0 +white+)))
 
-
-(time (let* ((nx 200)
-             (ny 100)
-             (ns 10)
-             (lookfrom (v:vec3 3 3 2))
-             (lookat (v:vec3 0 0 -1))
-             (aperture 1.0)
-             (dist-to-focus (v:length (v:diff lookfrom lookat)))
-             (camera (cam lookfrom
-                          lookat
-                          (v:vec3 0 1 0)
-                          45 (/ nx ny)
-;                          aperture
-;                          dist-to-focus
-                          ))
-             (R (cos pi/4))
-             (obj-list
-              (list (g:make-sphere (v:vec3 0 0 -1) 0.5
+(define test-scene
+  (list (g:make-sphere (v:vec3 0 0 -1) 0.5
                                    (m:make-lambertian
                                     (v:vec3 0.1 0.2 0.5)))
                     (g:make-sphere (v:vec3 0 -100.5 -1) 100
@@ -124,8 +109,30 @@
                                       0.3))
                     (g:make-sphere (v:vec3 -1 0 -1) 0.5
                                    (m:make-dielectric 1.5))
-                    (g:make-sphere (v:vec3 -1 0 -1) -0.45
-                                   (m:make-dielectric 1.5)))))
+                    ;; (g:make-sphere (v:vec3 -1 0 -1) -0.45
+                    ;;                (m:make-dielectric 1.5))
+                    ))
+
+(time (let* ((nx 200)
+             (ny 100)
+             (ns 20)
+             (lookfrom (v:vec3 10 2 3))
+;             (lookfrom (v:vec3 0 2 5))
+             (lookat (v:vec3 0 0 0))
+             (aperture 0)
+             (dist-to-focus 1)
+             (camera (make-camera lookfrom
+                                  lookat
+                                  (v:vec3 0 1 0)
+                                  20 (/ nx ny)
+                                  aperture
+                                  dist-to-focus 0 1
+                                  ))
+             (obj-list
+              (random-scene)
+;              test-scene
+              )
+             )
         (with-output-to-file "test.ppm"
           (lambda ()
             (display (format "P3\n ~D ~D\n255\n" nx ny))
