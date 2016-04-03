@@ -9,6 +9,7 @@
   (use geometry :prefix g:)
   (use material :prefix m:)
   (use camera)
+  (use gauche.threads)
   (use gauche.uvector)
   (use gl)
   (use gl.glut))
@@ -105,8 +106,8 @@
     (if (>= sample-count ns)
         (v:quot col (v:vec3 ns ns ns))
         (let* ((u (/ (+ x (random-real)) nx))
-              (v (/ (+ y (random-real)) ny))
-              (ray (get-ray camera u v)))
+               (v (/ (+ y (random-real)) ny))
+               (ray (get-ray camera u v)))
           (loop (inc! sample-count) (v:sum col (color ray obj-list)))))))
 
 (define-inline (correct-gamma c)
@@ -128,34 +129,139 @@
                     (g:make-sphere (v:vec3 -1 0 -1) -0.45
                                    (m:make-dielectric 1.5))))
 
-(time (let* ((nx 200)
-             (ny 100)
-             (ns 20)
-             (lookfrom (v:vec3 10 2 3))
-;             (lookfrom (v:vec3 0 2 5))
-             (lookat (v:vec3 0 0 0))
-             (aperture 0)
-             (dist-to-focus 1)
-             (camera (make-camera lookfrom
-                                  lookat
-                                  (v:vec3 0 1 0)
-                                  20 (/ nx ny)
-                                  aperture
-                                  dist-to-focus 0 1))
-             (obj-list
-;              (random-scene)
-              test-scene
-              ))
-        (with-output-to-file "test.ppm"
-          (lambda ()
-            (display (format "P3\n ~D ~D\n255\n" nx ny))
-            (dotimes (y ny)
-                     (dotimes (x nx)
-                              (let* ((c (correct-gamma (calc-pixel-color x (- ny y) nx ny camera
-                                                                         obj-list ns)))
-                                     (ir (floor->exact (* 255.99 (v:x c))))
-                                     (ig (floor->exact (* 255.99 (v:y c))))
-                                     (ib (floor->exact (* 255.99 (v:z c)))))
-                                (display (format "~D ~D ~D\n"
-                                                 ir ig ib)))))))))
+(define *tex* #f)
+(define *size-x* 200)
+(define *size-y* 100)
+(define *image* (make-u8vector (* *size-x* *size-y* 3) 0))
+(define *raw-data* (make-vector (* *size-x* *size-y*) 0))
+(define *current-y* 0)
+
+(define *camera*
+  (let ((lookfrom (v:vec3 10 2 3))
+                                        ;             (lookfrom (v:vec3 0 2 5))
+        (lookat (v:vec3 0 0 0))
+        (aperture 0)
+        (dist-to-focus 1))
+    (make-camera lookfrom
+                 lookat
+                 (v:vec3 0 1 0)
+                 20 (/ *size-x* *size-y*)
+                 aperture
+                 dist-to-focus 0 1)))
+
+(define *max-sample* 20)
+
+(define *obj-list* (random-scene))
+
+
+(define *rendering?* #f)
+
+(define (save-as-ppm nx ny)
+  (with-output-to-file "test.ppm"
+    (lambda ()
+      (display (format "P3\n ~D ~D\n255\n" nx ny))
+      (dotimes (y ny)
+               (dotimes (x nx)
+                        (let* ((i (* (+ (* (- ny y 1) nx) x) 3))
+                               (ir (u8vector-ref *image* i))
+                               (ig (u8vector-ref *image* (+ i 1)))
+                               (ib (u8vector-ref *image* (+ i 2))))
+                          (display (format "~D ~D ~D\n"
+                                           ir ig ib))))))))
+
+(define (trace-line y sample-count)
+  (dotimes (x *size-x*)
+           (let* ((i (* (+ (* y *size-x*) x) 3))
+                  (j (+ (* y *size-x*) x))
+                  (col (let* ((u (/ (+ x (random-real)) *size-x*))
+                              (v (/ (+ y (random-real)) *size-y*))
+                              (ray (get-ray *camera* u v)))
+                         (color ray *obj-list*)))
+                  (sum-color (v:sum (vector-ref *raw-data* j) col))
+                  (col (correct-gamma
+                        (v:quot sum-color (v:vec3 sample-count sample-count sample-count))))
+                  (ir (floor->exact (* 255.99 (v:x col))))
+                  (ig (floor->exact (* 255.99 (v:y col))))
+                  (ib (floor->exact (* 255.99 (v:z col)))))
+             (vector-set! *raw-data* j sum-color)
+             (u8vector-set! *image* i       ir)
+             (u8vector-set! *image* (+ i 1) ig)
+             (u8vector-set! *image* (+ i 2) ib))))
+
+(define (set-texture)
+  (gl-clear-color 0.0 0.0 0.0 0.0)
+  (gl-shade-model GL_FLAT)
+  (set! *tex* (u32vector-ref (gl-gen-textures 1) 0))
+  (gl-bind-texture GL_TEXTURE_2D *tex*)
+  (gl-tex-parameter GL_TEXTURE_2D GL_TEXTURE_WRAP_S GL_REPEAT)
+  (gl-tex-parameter GL_TEXTURE_2D GL_TEXTURE_WRAP_T GL_REPEAT)
+  (gl-tex-parameter GL_TEXTURE_2D GL_TEXTURE_MAG_FILTER GL_NEAREST)
+  (gl-tex-parameter GL_TEXTURE_2D GL_TEXTURE_MIN_FILTER GL_NEAREST)
+  (gl-tex-image-2d GL_TEXTURE_2D 0 GL_RGB *size-x* *size-y* 0
+                   GL_RGB GL_UNSIGNED_BYTE *image*))
+
+(define (disp)
+  (gl-clear GL_COLOR_BUFFER_BIT)
+  (gl-enable GL_TEXTURE_2D)
+  (gl-tex-env GL_TEXTURE_ENV GL_TEXTURE_ENV_MODE GL_REPLACE)
+  (gl-bind-texture GL_TEXTURE_2D *tex*)
+  (gl-push-matrix)
+  (gl-load-identity)
+  (gl-begin GL_QUADS)
+  (gl-tex-coord '#f32(0.0 0.0)) (gl-vertex '#f32(0.0 0.0))
+  (gl-tex-coord '#f32(0.0 1.0)) (gl-vertex '#f32(0.0 1.0))
+  (gl-tex-coord '#f32(1.0 1.0)) (gl-vertex '#f32(1.0 1.0))
+  (gl-tex-coord '#f32(1.0 0.0)) (gl-vertex '#f32(1.0 0.0))
+  (gl-end)
+  (gl-pop-matrix)
+  (glut-swap-buffers)
+  (gl-disable GL_TEXTURE_2D)
+  (animate))
+
+(define (reshape w h)
+  (gl-viewport 0 0 w h)
+  (gl-matrix-mode GL_PROJECTION)
+  (gl-load-identity)
+  (glu-ortho-2d 0 1 0 1)
+  (gl-matrix-mode GL_MODELVIEW)
+  (gl-load-identity))
+
+(define *sample-count* 1)
+
+(define (animate)
+  (if *rendering?*
+      (if (< *current-y* *size-y*)
+          (begin
+            (trace-line *current-y* *sample-count*)
+            (set-texture)
+            (inc! *current-y*))
+          (begin
+            (inc! *sample-count*)
+            (set! *current-y* 0)
+            (glut-set-window-title (format "sample - ~D" *sample-count*)))))
+  (glut-post-redisplay))
+
+(define (key k x y)
+  (let1 q (lambda () (glut-post-redisplay))
+    (cond
+     ((= k (char->integer #\z))
+      (set! *rendering?* (not *rendering?*)) (q))
+     ((= k (char->integer #\S))
+      (save-as-ppm *size-x* *size-y*) (q))
+     ((= k (char->integer #\escape)) (exit)))))
+
+(define (start-glut)
+  (glut-init '())
+  (glut-init-display-mode (logior GLUT_DOUBLE GLUT_RGB))
+  (glut-init-window-size *size-x* *size-y*)
+  (glut-create-window (format "sample - ~D" *sample-count*))
+  (set-texture)
+  (glut-reshape-func reshape)
+  (glut-display-func disp)
+  (glut-keyboard-func key)
+  (glut-main-loop))
+
+(define *gl-thread* (make-thread (cut start-glut)))
+(thread-start! *gl-thread*)
+
 
