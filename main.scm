@@ -8,7 +8,10 @@
   (use ray)
   (use geometry :prefix g:)
   (use material :prefix m:)
-  (use camera))
+  (use camera)
+  (use gauche.uvector)
+  (use gl)
+  (use gl.glut))
 
 (select-module main)
 
@@ -96,6 +99,19 @@
                                  (v:prod acc (sky-color t)))))))))
     (col r obj-list 0 +white+)))
 
+(define (calc-pixel-color x y nx ny camera obj-list ns)
+  (let loop ((sample-count 0)
+             (col (v:vec3 0 0 0)))
+    (if (>= sample-count ns)
+        (v:quot col (v:vec3 ns ns ns))
+        (let* ((u (/ (+ x (random-real)) nx))
+              (v (/ (+ y (random-real)) ny))
+              (ray (get-ray camera u v)))
+          (loop (inc! sample-count) (v:sum col (color ray obj-list)))))))
+
+(define-inline (correct-gamma c)
+  (v:vec3 (sqrt (v:x c)) (sqrt (v:y c)) (sqrt (v:z c))))
+
 (define test-scene
   (list (g:make-sphere (v:vec3 0 0 -1) 0.5
                                    (m:make-lambertian
@@ -109,9 +125,8 @@
                                       0.3))
                     (g:make-sphere (v:vec3 -1 0 -1) 0.5
                                    (m:make-dielectric 1.5))
-                    ;; (g:make-sphere (v:vec3 -1 0 -1) -0.45
-                    ;;                (m:make-dielectric 1.5))
-                    ))
+                    (g:make-sphere (v:vec3 -1 0 -1) -0.45
+                                   (m:make-dielectric 1.5))))
 
 (time (let* ((nx 200)
              (ny 100)
@@ -126,36 +141,21 @@
                                   (v:vec3 0 1 0)
                                   20 (/ nx ny)
                                   aperture
-                                  dist-to-focus 0 1
-                                  ))
+                                  dist-to-focus 0 1))
              (obj-list
-              (random-scene)
-;              test-scene
-              )
-             )
+;              (random-scene)
+              test-scene
+              ))
         (with-output-to-file "test.ppm"
           (lambda ()
             (display (format "P3\n ~D ~D\n255\n" nx ny))
-            (let loop-y ((y (- ny 1)))
-              (if (>= y 0)
-                  (let loop-x ((x 0))
-                    (if (< x nx)
-                        (let* ((c (let loop ((sample-count 0)
-                                             (col (v:vec3 0 0 0)))
-                                    (if (>= sample-count ns)
-                                        (v:quot col (v:vec3 ns ns ns))
-                                        (let* ((u (/ (+ x (random-real)) nx))
-                                               (v (/ (+ y (random-real)) ny))
-                                               (ray (get-ray camera u v))
-                                               (col (v:sum col
-                                                           (color ray obj-list))))
-                                          (loop (inc! sample-count) col)))))
-                               (c (v:vec3 (sqrt (v:x c)) (sqrt (v:y c)) (sqrt (v:z c))))
-                               (ir (floor->exact (* 255.99 (v:x c))))
-                               (ig (floor->exact (* 255.99 (v:y c))))
-                               (ib (floor->exact (* 255.99 (v:z c)))))
-                          (display (format "~D ~D ~D\n"
-                                           ir ig ib))
-                          (loop-x (inc! x)))
-                        (loop-y (dec! y))))))))))
+            (dotimes (y ny)
+                     (dotimes (x nx)
+                              (let* ((c (correct-gamma (calc-pixel-color x (- ny y) nx ny camera
+                                                                         obj-list ns)))
+                                     (ir (floor->exact (* 255.99 (v:x c))))
+                                     (ig (floor->exact (* 255.99 (v:y c))))
+                                     (ib (floor->exact (* 255.99 (v:z c)))))
+                                (display (format "~D ~D ~D\n"
+                                                 ir ig ib)))))))))
 
