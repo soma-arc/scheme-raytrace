@@ -9,6 +9,7 @@
 (define-inline (x v) (f64vector-ref v 0))
 (define-inline (y v) (f64vector-ref v 1))
 (define-inline (z v) (f64vector-ref v 2))
+(define vec3-ref f64vector-ref)
 
 (define sum
   (lambda v
