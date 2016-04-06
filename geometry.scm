@@ -1,5 +1,7 @@
 (define-module geometry
-  (use gauche.record)
+  (use srfi-11)
+  (use srfi-27)
+  (use gauche.sequence)
   (use vec :prefix v:)
   (use ray)
   (use material :prefix m:)
@@ -9,6 +11,38 @@
 
 (define (hit obj r t-min t-max)
   ((vector-ref obj 0) r t-min t-max))
+
+(define-inline (scene-obj-list scene)
+  (vector-ref scene 2))
+
+(define (sub-scene scene start end)
+  (let ((obj-list (scene-obj-list scene)))
+    (make-scene (subseq obj-list start end))))
+
+(define-inline (scene-num-obj scene)
+  (length (scene-obj-list scene)))
+
+(define (make-scene obj-list)
+  (vector
+   (lambda (r t-min t-max)
+     (let loop ((obj-list obj-list)
+                (hit-anything #f)
+                (closest-so-far t-max)
+                (rec #f))
+       (if (null? obj-list)
+           (values hit-anything rec)
+           (receive (hit? hit-rec)
+                    (hit (car obj-list) r t-min closest-so-far)
+                    (if hit?
+                        (loop (cdr obj-list)
+                              #t
+                              (t hit-rec)
+                              hit-rec)
+                        (loop (cdr obj-list)
+                              hit-anything
+                              closest-so-far
+                              rec))))))
+   #f obj-list))
 
 (define (bounding-box obj t0 t1)
   ((vector-ref obj 1) t0 t1))
@@ -26,7 +60,7 @@
   (vector (lambda (r t-min t-max)
             (let loop ((axis 0))
               (if (= axis 3)
-                  #t
+                  (values #t #f)
                   (let* ((1/dir (/ 1 (v:vec3-ref (dir r) axis)))
                          (t0 (min (* (- (v:vec3-ref box-min axis)
                                         (v:vec3-ref (origin r) axis))
@@ -43,7 +77,7 @@
                          (t-min (max t0 t-min))
                          (t-max (min t1 t-max)))
                     (if (<= t-max t-min)
-                        #f
+                        (values #f #f)
                         (loop (inc! axis)))))))
           box-min box-max))
 
@@ -122,22 +156,49 @@
                                      (v:sum (center t1) (v:vec3 radius radius radius))))))
             material center0 center1 time0 time1 radius)))
 
-(define (calc-nearest obj-list r t-min t-max)
-  (let loop ((obj-list obj-list)
-             (hit-anything #f)
-             (closest-so-far t-max)
-             (rec #f))
-    (if (null? obj-list)
-        (values hit-anything rec)
-        (receive (hit? hit-rec)
-                 (hit (car obj-list) r t-min closest-so-far)
-                 (if hit?
-                     (loop (cdr obj-list)
-                           #t
-                           (t hit-rec)
-                           hit-rec)
-                     (loop (cdr obj-list)
-                           hit-anything
-                           closest-so-far
-                           rec))))))
+(define (make-bvh-node scene n time0 time1)
+  (let* ((axis (floor->exact (* 3 (random-real))))
+         (obj-list (sort (scene-obj-list scene) (box-compare axis)))
+         (half (floor->exact (/ n 2)))
+         (left (cond ((= n 1) (ref obj-list 0))
+                     ((= n 2) (ref obj-list 0))
+                     (else (make-bvh-node (make-scene (subseq obj-list 0 half))
+                                          half
+                                          time0 time1))))
+         (right (cond ((= n 1) (ref obj-list 0))
+                      ((= n 2) (ref obj-list 1))
+                      (else (make-bvh-node (make-scene (subseq obj-list
+                                                               half
+                                                               (length obj-list)))
+                                           (- n half)
+                                           time0 time1)))))
+    (let-values (((valid-left? left-box) (bounding-box left 0 0))
+                 ((valid-right? right-box) (bounding-box right 0 0)))
+      (let ((aabb (surrounding-box left-box right-box)))
+        (vector (lambda (r t-min t-max)
+                  (receive (hit? hit-rec)
+                           (hit aabb r t-min t-max)
+                           (if (not hit?)
+                               (values #f #f)
+                               (let-values (((hit-left? left-rec) (hit left r t-min t-max))
+                                            ((hit-right? right-rec) (hit right r t-min t-max)))
+                                 (cond
+                                  ((and hit-left? hit-right?)
+                                   (values #t (if (< (t left-rec) (t right-rec))
+                                                  left-rec right-rec)))
+                                  (hit-left? (values #t left-rec))
+                                  (hit-right? (values #t right-rec))
+                                  (else (values #f #f)))))))
+                (lambda (t0 t1)
+                  (values #t aabb)))))))
+
+(define (box-compare axis)
+  (lambda (a b)
+    (let-values (((valid-left? left-box) (bounding-box a 0 0))
+                 ((valid-right? right-box) (bounding-box b 0 0)))
+      (if (or (not valid-left?) (not valid-right?))
+          (display "No bounding box in bvh node constructor"))
+      (if (< (- (v:vec3-ref (aabb-min left-box) axis)
+                (v:vec3-ref (aabb-min right-box) axis)) 0)
+          -1 1))))
 

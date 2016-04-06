@@ -30,10 +30,10 @@
             (v:vec3 0 -1000 0) 1000
             (m:make-lambertian
              (v:vec3 0.5 0.5 0.5))))
-    (let loop-a ((a -5))
-      (if (< a 5)
-          (let loop-b ((b -5))
-            (if (< b 5)
+    (let loop-a ((a -10))
+      (if (< a 10)
+          (let loop-b ((b -10))
+            (if (< b 10)
                 (let ((choose-mat (random-real))
                       (center (v:vec3 (+ a (* 0.9 (random-real)))
                                       0.2
@@ -75,7 +75,8 @@
     (push! obj-list
            (g:make-sphere
             (v:vec3 4 1 0) 1
-            (m:make-metal (v:vec3 0.7 0.6 0.5) 0)))))
+            (m:make-metal (v:vec3 0.7 0.6 0.5) 0)))
+    (g:make-scene obj-list)))
 
 (define (sky-color t)
   (v:sum (v:scale +white+ (- 1 t))
@@ -87,7 +88,7 @@
               (if (> depth +max-depth+)
                   +black+
                   (receive (hit? hit-rec)
-                           (g:calc-nearest obj-list r 0.0 +max-float+)
+                           (g:hit obj-list r 0.0 +max-float+)
                            (if hit?
                                (receive (valid? scattered attenuation)
                                         (m:scatter (material hit-rec) r hit-rec)
@@ -114,20 +115,21 @@
   (v:vec3 (sqrt (v:x c)) (sqrt (v:y c)) (sqrt (v:z c))))
 
 (define test-scene
-  (list (g:make-sphere (v:vec3 0 0 -1) 0.5
-                                   (m:make-lambertian
-                                    (v:vec3 0.1 0.2 0.5)))
-                    (g:make-sphere (v:vec3 0 -100.5 -1) 100
-                                   (m:make-lambertian
-                                     (v:vec3 0.8 0.8 0)))
-                    (g:make-sphere (v:vec3 1 0 -1) 0.5
-                                   (m:make-metal
-                                     (v:vec3 0.8 0.6 0.2)
-                                      0.3))
-                    (g:make-sphere (v:vec3 -1 0 -1) 0.5
-                                   (m:make-dielectric 1.5))
-                    (g:make-sphere (v:vec3 -1 0 -1) -0.45
-                                   (m:make-dielectric 1.5))))
+  (g:make-scene
+   (list (g:make-sphere (v:vec3 0 0 -1) 0.5
+                        (m:make-lambertian
+                         (v:vec3 0.1 0.2 0.5)))
+         (g:make-sphere (v:vec3 0 -100.5 -1) 100
+                        (m:make-lambertian
+                         (v:vec3 0.8 0.8 0)))
+         (g:make-sphere (v:vec3 1 0 -1) 0.5
+                        (m:make-metal
+                         (v:vec3 0.8 0.6 0.2)
+                         0.3))
+         (g:make-sphere (v:vec3 -1 0 -1) 0.5
+                        (m:make-dielectric 1.5))
+         (g:make-sphere (v:vec3 -1 0 -1) -0.45
+                        (m:make-dielectric 1.5)))))
 
 (define *tex* #f)
 (define *size-x* 200)
@@ -151,7 +153,13 @@
 
 (define *max-sample* 20)
 
-(define *obj-list* (random-scene))
+(define *obj-list*
+  ;;(random-scene)
+  ;; (let ((scene (random-scene)))
+  ;;   (g:make-bvh-node scene (g:scene-num-obj scene) 0 1))
+  ;;test-scene
+  (g:make-bvh-node test-scene (g:scene-num-obj test-scene) 0 1)
+  )
 
 
 (define *rendering?* #f)
@@ -263,5 +271,6 @@
 
 (define *gl-thread* (make-thread (cut start-glut)))
 (thread-start! *gl-thread*)
+
 
 
