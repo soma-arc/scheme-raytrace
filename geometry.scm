@@ -1,6 +1,7 @@
 (define-module geometry
   (use srfi-11)
   (use srfi-27)
+  (use math.const)
   (use gauche.sequence)
   (use vec :prefix v:)
   (use ray)
@@ -88,6 +89,14 @@
              (v:vec3 (max (v:x (aabb-max box0)) (v:x (aabb-max box1)))
                      (max (v:y (aabb-max box0)) (v:y (aabb-max box1)))
                      (max (v:z (aabb-max box0)) (v:z (aabb-max box1))))))
+
+(define (get-sphere-uv p)
+  (let ((phi (atan (v:z p) (v:z p)))
+        (theta (asin (v:y p))))
+    (values (- 1 (/ (+ phi pi)
+                    (* 2 pi)))
+            (/ (+ theta pi/2)
+               pi))))
 
 (define (make-sphere center radius material)
   (vector (lambda (r t-min t-max)

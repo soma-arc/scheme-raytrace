@@ -33,3 +33,18 @@
                      (* 0.5 (+ 1 (sin (+ (* sc (v:z p))
                                          (* 10 (turb p))))))))))
 
+(define (image-texture data nx ny)
+  (vector
+   (lambda (u v p)
+     (let* ((i (* u nx))
+            (j (- (* (- 1 v) ny) 0.001))
+            (i (if (< i 0) 0 i))
+            (j (if (< j 0) 0 j))
+            (i (if (> i (- nx 1)) (- nx 1) i))
+            (j (if (> j (- ny 1)) (- ny 1) j)))
+       (v:vec3 (/ (floor->exact (vector-ref data (+ (* 3 i) (* 3 nx j))))
+                  255)
+               (/ (floor->exact (vector-ref data (+ (* 3 i) (* 3 nx j) 1)))
+                  255)
+               (/ (floor->exact (vector-ref data (+ (* 3 i) (* 3 nx j) 2)))
+                  255))))))
