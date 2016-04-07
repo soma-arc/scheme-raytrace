@@ -3,6 +3,7 @@
 (define-module main
   (use vec :prefix v:)
   (use srfi-27)
+  (use srfi-43)
   (use math.const)
   (use util)
   (use ray)
@@ -138,6 +139,14 @@
          (g:make-sphere (v:vec3 -1 0 -1) -0.45
                         (m:make-dielectric 1.5)))))
 
+(define test-scene2
+  (let ((per-tex (t:noise-texture 1)))
+    (g:make-scene
+     (list (g:make-sphere (v:vec3 0 -1000 -1) 1000
+                          (m:make-lambertian per-tex))
+           (g:make-sphere (v:vec3 0 2 0) 2
+                          (m:make-lambertian per-tex))))))
+
 (define *tex* #f)
 (define *size-x* 200)
 (define *size-y* 100)
@@ -146,7 +155,8 @@
 (define *current-y* 0)
 
 (define *camera*
-  (let ((lookfrom (v:vec3 10 2 3))
+  (let ((lookfrom (v:vec3 13 2 3))
+        ;(lookfrom (v:vec3 10 2 3))
                                         ;             (lookfrom (v:vec3 0 2 5))
         (lookat (v:vec3 0 0 0))
         (aperture 0)
@@ -161,7 +171,8 @@
 (define *max-sample* 20)
 
 (define *obj-list*
-  (random-scene)
+  ;(random-scene)
+  test-scene2
   ;; (let ((scene (random-scene)))
   ;;   (g:make-bvh-node scene (g:scene-num-obj scene) 0 1))
 ;  test-scene
@@ -278,8 +289,4 @@
 
 (define *gl-thread* (make-thread (cut start-glut)))
 ;(thread-start! *gl-thread*)
-
-
-
-
-
+;(trace-line 0 10)
