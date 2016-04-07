@@ -5,6 +5,7 @@
   (use vec :prefix v:)
   (use ray)
   (use util)
+  (use texture :prefix t:)
   (export-all))
 
 (select-module material)
@@ -19,7 +20,7 @@
                        (random-dir-over-hemisphere (normal hit-rec)))))
               (values #t
                       (make-ray (p hit-rec) (v:diff target (p hit-rec)))
-                      albedo)))
+                      (t:value albedo 0 0 (p hit-rec)))))
           albedo))
 
 (define (reflect v n)
@@ -35,7 +36,7 @@
                                                         fuzz)))))
               (values (> (v:dot (dir scattered) (normal hit-rec)) 0)
                       scattered
-                      albedo)))
+                      (t:value albedo 0 0 (p hit-rec)))))
           albedo fuzz))
 
 (define (refract v n ni-over-nt)

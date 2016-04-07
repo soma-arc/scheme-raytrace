@@ -8,6 +8,7 @@
   (use ray)
   (use geometry :prefix g:)
   (use material :prefix m:)
+  (use texture :prefix t:)
   (use camera)
   (use gauche.threads)
   (use gauche.uvector)
@@ -24,15 +25,17 @@
 
 (define (random-scene)
   (let ((n 300)
-        (obj-list '()))
+        (obj-list '())
+        (checker (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
+                                    (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
     (push! obj-list
            (g:make-sphere
             (v:vec3 0 -1000 0) 1000
             (m:make-lambertian
-             (v:vec3 0.5 0.5 0.5))))
-    (let loop-a ((a -10))
+             checker)))
+    (let loop-a ((a -5))
       (if (< a 10)
-          (let loop-b ((b -10))
+          (let loop-b ((b -5))
             (if (< b 10)
                 (let ((choose-mat (random-real))
                       (center (v:vec3 (+ a (* 0.9 (random-real)))
@@ -46,17 +49,19 @@
                                 center
                                 (v:sum center (v:vec3 0 (* 0.5 (random-real)) 0)) 0 1 0.2
                                 (m:make-lambertian
-                                 (v:vec3 (* (random-real) (random-real))
-                                         (* (random-real) (random-real))
-                                         (* (random-real) (random-real)))))))
+                                 (t:constant-texture
+                                  (v:vec3 (* (random-real) (random-real))
+                                          (* (random-real) (random-real))
+                                          (* (random-real) (random-real))))))))
                        ((< choose-mat 0.95)
                         (push! obj-list
                                (g:make-sphere
                                 center 0.2
                                 (m:make-metal
+                                 (t:constant-texture
                                   (v:vec3 (* 0.5 (+ 1 (random-real)))
-                                                  (* 0.5 (+ 1 (random-real)))
-                                                  (* 0.5 (+ 1 (random-real))))
+                                          (* 0.5 (+ 1 (random-real)))
+                                          (* 0.5 (+ 1 (random-real)))))
                                   (* 0.5 (random-real))))))
                        (else (push! obj-list
                                     (g:make-sphere
@@ -71,11 +76,11 @@
     (push! obj-list
            (g:make-sphere
             (v:vec3 -4 1 0) 1
-            (m:make-lambertian (v:vec3 0.4 0.2 0.1))))
+            (m:make-lambertian (t:constant-texture (v:vec3 0.4 0.2 0.1)))))
     (push! obj-list
            (g:make-sphere
             (v:vec3 4 1 0) 1
-            (m:make-metal (v:vec3 0.7 0.6 0.5) 0)))
+            (m:make-metal (t:constant-texture (v:vec3 0.7 0.6 0.5)) 0)))
     (g:make-scene obj-list)))
 
 (define (sky-color t)
@@ -118,13 +123,15 @@
   (g:make-scene
    (list (g:make-sphere (v:vec3 0 0 -1) 0.5
                         (m:make-lambertian
-                         (v:vec3 0.1 0.2 0.5)))
+                         (t:constant-texture (v:vec3 0.1 0.2 0.5))))
          (g:make-sphere (v:vec3 0 -100.5 -1) 100
                         (m:make-lambertian
-                         (v:vec3 0.8 0.8 0)))
+                         (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
+                                            (t:constant-texture (v:vec3 0.9 0.9 0.9)))
+                         ))
          (g:make-sphere (v:vec3 1 0 -1) 0.5
                         (m:make-metal
-                         (v:vec3 0.8 0.6 0.2)
+                         (t:constant-texture (v:vec3 0.8 0.6 0.2))
                          0.3))
          (g:make-sphere (v:vec3 -1 0 -1) 0.5
                         (m:make-dielectric 1.5))
@@ -154,11 +161,11 @@
 (define *max-sample* 20)
 
 (define *obj-list*
-  ;;(random-scene)
+  (random-scene)
   ;; (let ((scene (random-scene)))
   ;;   (g:make-bvh-node scene (g:scene-num-obj scene) 0 1))
-  ;;test-scene
-  (g:make-bvh-node test-scene (g:scene-num-obj test-scene) 0 1)
+;  test-scene
+  ;;(g:make-bvh-node test-scene (g:scene-num-obj test-scene) 0 1)
   )
 
 
@@ -270,7 +277,9 @@
   (glut-main-loop))
 
 (define *gl-thread* (make-thread (cut start-glut)))
-(thread-start! *gl-thread*)
+;(thread-start! *gl-thread*)
+
+
 
 
 
