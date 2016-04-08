@@ -2,6 +2,7 @@
 
 (define-module main
   (use vec :prefix v:)
+  (use srfi-11)
   (use srfi-27)
   (use srfi-43)
   (use math.const)
@@ -10,7 +11,7 @@
   (use geometry :prefix g:)
   (use material :prefix m:)
   (use texture :prefix t:)
-  (use camera)
+  (use camera :prefix cam:)
   (use gauche.threads)
   (use gauche.uvector)
   (use gl)
@@ -19,7 +20,7 @@
 (select-module main)
 
 (define +max-float+ 999999999999)
-(define +max-depth+ 5)
+(define +max-depth+ 100)
 
 (define +black+ (v:vec3 0 0 0))
 (define +white+ (v:vec3 1 1 1))
@@ -90,6 +91,28 @@
 
 (define (color r obj-list)
   (letrec ((col
+            (lambda (r obj-list depth)
+              (receive (hit? hit-rec)
+                       (g:hit obj-list r 0.001 +max-float+)
+                       (if hit?
+                           (let*-values (((valid? scattered attenuation)
+                                          (m:scatter (material hit-rec) r hit-rec))
+                                         ((emitted)
+                                          (m:emitted (material hit-rec)
+                                                     (u hit-rec) (v hit-rec) (p hit-rec))))
+                             (if (and (< depth +max-depth+) valid?)
+                                 (v:sum emitted
+                                        (v:prod attenuation
+                                                (col scattered obj-list (+ 1 depth))))
+                                 emitted))
+                           +black+ ;;+black+ no hit
+                           ;; (let* ((unit-dir (v:unit (dir r)))
+                           ;;        (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
+                           ;;   (sky-color t))
+                           )))))
+    (col r obj-list 0)))
+
+
             (lambda (r obj-list depth acc)
               (if (> depth +max-depth+)
                   +black+
@@ -104,8 +127,7 @@
                                             +black+))
                                (let* ((unit-dir (v:unit (dir r)))
                                       (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
-                                 (v:prod acc (sky-color t)))))))))
-    (col r obj-list 0 +white+)))
+                                 (v:prod acc (sky-color t)))))))
 
 (define (calc-pixel-color x y nx ny camera obj-list ns)
   (let loop ((sample-count 0)
@@ -114,7 +136,7 @@
         (v:quot col (v:vec3 ns ns ns))
         (let* ((u (/ (+ x (random-real)) nx))
                (v (/ (+ y (random-real)) ny))
-               (ray (get-ray camera u v)))
+               (ray (cam:get-ray camera u v)))
           (loop (inc! sample-count) (v:sum col (color ray obj-list)))))))
 
 (define-inline (correct-gamma c)
@@ -140,39 +162,59 @@
                         (m:make-dielectric 1.5)))))
 
 (define test-scene2
-  (let ((per-tex (t:noise-texture 1)))
+  (let ((per-tex (t:marble-texture 1)))
     (g:make-scene
      (list (g:make-sphere (v:vec3 0 -1000 -1) 1000
                           (m:make-lambertian per-tex))
            (g:make-sphere (v:vec3 0 2 0) 2
-                          (m:make-lambertian per-tex))))))
+                          (m:make-lambertian per-tex))
+           (g:make-sphere (v:vec3 0 7 0) 2
+                          (m:make-diffuse-light (t:constant-texture (v:vec3 4 4 4))))
+           (g:make-xy-rect 3 5 1 3 -2
+                           (m:make-diffuse-light (t:constant-texture (v:vec3 4 4 4))))))))
+
+(define cornell-box
+  (let ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
+        (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
+        (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
+        (light (m:make-diffuse-light (t:constant-texture (v:vec3 15 15 15)))))
+      (g:make-scene
+       (list (g:flip-normals (g:make-yz-rect 0 555 0 555 555 green))
+             (g:make-yz-rect 0 555 0 555 0 red)
+             (g:make-xz-rect 213 343 227 332 554 light)
+;             (g:make-xz-rect 113 443 127 432 554 light)
+             (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
+             (g:make-xz-rect 0 555 0 555 0 white)
+             (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))))))
 
 (define *tex* #f)
-(define *size-x* 200)
-(define *size-y* 100)
+(define *size-x* 500)
+(define *size-y* 500)
 (define *image* (make-u8vector (* *size-x* *size-y* 3) 0))
 (define *raw-data* (make-vector (* *size-x* *size-y*) 0))
 (define *current-y* 0)
 
 (define *camera*
-  (let ((lookfrom (v:vec3 13 2 3))
-        ;(lookfrom (v:vec3 10 2 3))
-                                        ;             (lookfrom (v:vec3 0 2 5))
+  (let ((lookfrom (v:vec3 278 278 -800))
+;        (lookfrom (v:vec3 15 5 3))
+;        (lookfrom (v:vec3 0 2 5))
+        (lookat (v:vec3 278 278 0))
         (lookat (v:vec3 0 0 0))
         (aperture 0)
         (dist-to-focus 1))
-    (make-camera lookfrom
-                 lookat
-                 (v:vec3 0 1 0)
-                 20 (/ *size-x* *size-y*)
-                 aperture
-                 dist-to-focus 0 1)))
+    (cam:make-camera lookfrom
+                     lookat
+                     (v:vec3 0 1 0)
+                     40 (/ *size-x* *size-y*)
+                     aperture
+                     dist-to-focus 0 1)))
 
 (define *max-sample* 20)
 
 (define *obj-list*
+  cornell-box
   ;(random-scene)
-  test-scene2
+;  test-scene2
   ;; (let ((scene (random-scene)))
   ;;   (g:make-bvh-node scene (g:scene-num-obj scene) 0 1))
 ;  test-scene
@@ -201,18 +243,40 @@
                   (j (+ (* y *size-x*) x))
                   (col (let* ((u (/ (+ x (random-real)) *size-x*))
                               (v (/ (+ y (random-real)) *size-y*))
-                              (ray (get-ray *camera* u v)))
+                              (ray (cam:get-ray *camera* u v)))
                          (color ray *obj-list*)))
                   (sum-color (v:sum (vector-ref *raw-data* j) col))
                   (col (correct-gamma
                         (v:quot sum-color (v:vec3 sample-count sample-count sample-count))))
-                  (ir (floor->exact (* 255.99 (v:x col))))
-                  (ig (floor->exact (* 255.99 (v:y col))))
-                  (ib (floor->exact (* 255.99 (v:z col)))))
+                  (ir (floor->exact (* 255.99 (min 1 (v:x col)))))
+                  (ig (floor->exact (* 255.99 (min 1 (v:y col)))))
+                  (ib (floor->exact (* 255.99 (min 1 (v:z col))))))
              (vector-set! *raw-data* j sum-color)
              (u8vector-set! *image* i       ir)
              (u8vector-set! *image* (+ i 1) ig)
              (u8vector-set! *image* (+ i 2) ib))))
+
+(define (trace-all sample-count)
+  (dotimes (y *size-y*)
+           (dotimes (x *size-x*)
+                    (let* ((i (* (+ (* y *size-x*) x) 3))
+                           (j (+ (* y *size-x*) x))
+                           (col (let* ((u (/ (+ x (random-real)) *size-x*))
+                                       (v (/ (+ y (random-real)) *size-y*))
+                                       (ray (cam:get-ray *camera* u v)))
+                                  (color ray *obj-list*)))
+                           (sum-color (v:sum (vector-ref *raw-data* j) col))
+                           (col (correct-gamma
+                                 (v:quot sum-color (v:vec3 sample-count
+                                                           sample-count
+                                                           sample-count))))
+                           (ir (floor->exact (* 255.99 (min 1 (v:x col)))))
+                           (ig (floor->exact (* 255.99 (min 1 (v:y col)))))
+                           (ib (floor->exact (* 255.99 (min 1 (v:z col))))))
+                      (vector-set! *raw-data* j sum-color)
+                      (u8vector-set! *image* i       ir)
+                      (u8vector-set! *image* (+ i 1) ig)
+                      (u8vector-set! *image* (+ i 2) ib)))))
 
 (define (set-texture)
   (gl-clear-color 0.0 0.0 0.0 0.0)
@@ -287,6 +351,9 @@
   (glut-keyboard-func key)
   (glut-main-loop))
 
+
+;(trace-line 30 10)
+;(trace-all 1)
+
 (define *gl-thread* (make-thread (cut start-glut)))
-;(thread-start! *gl-thread*)
-;(trace-line 0 10)
+(thread-start! *gl-thread*)

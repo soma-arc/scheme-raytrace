@@ -24,8 +24,8 @@
   (v:sum (origin ray)
          (v:scale (dir ray) t)))
 
-(define-inline (make-hit-record t p normal material)
-  (vector t p normal material))
+(define-inline (make-hit-record t p normal material u v)
+  (vector t p normal material u v))
 
 (define-inline (t hit-rec)
   (vector-ref hit-rec 0))
@@ -36,5 +36,15 @@
 (define-inline (normal hit-rec)
   (vector-ref hit-rec 2))
 
+(define-inline (normal-set! hit-rec value)
+  (set! (vector-ref hit-rec 2) value)
+  hit-rec)
+
 (define-inline (material hit-rec)
   (vector-ref hit-rec 3))
+
+(define-inline (u hit-rec)
+  (vector-ref hit-rec 4))
+
+(define-inline (v hit-rec)
+  (vector-ref hit-rec 5))

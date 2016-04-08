@@ -13,14 +13,20 @@
 (define (scatter material ray hit-rec)
   ((vector-ref material 0) ray hit-rec))
 
+(define (emitted material u v p)
+  ((vector-ref material 1) u v p))
+
 (define (make-lambertian albedo)
   (vector (lambda (ray hit-rec)
             (let ((target (v:sum (p hit-rec)
                                  (normal hit-rec)
-                       (random-dir-over-hemisphere (normal hit-rec)))))
+                                 ;(random-dir-over-hemisphere (normal hit-rec))
+                                 (random-in-unit-sphere))))
               (values #t
                       (make-ray (p hit-rec) (v:diff target (p hit-rec)))
                       (t:value albedo 0 0 (p hit-rec)))))
+          (lambda (u v p)
+            (v:vec3 0 0 0))
           albedo))
 
 (define (reflect v n)
@@ -37,6 +43,8 @@
               (values (> (v:dot (dir scattered) (normal hit-rec)) 0)
                       scattered
                       (t:value albedo 0 0 (p hit-rec)))))
+          (lambda (u v p)
+            (v:vec3 0 0 0))
           albedo fuzz))
 
 (define (refract v n ni-over-nt)
@@ -79,4 +87,12 @@
                                              (make-ray (p hit-rec) reflected)
                                              (make-ray (p hit-rec) refracted))))
                          (values #t scattered attenuation)))))
+          (lambda (u v p)
+            (v:vec3 0 0 0))
           ref-idx))
+
+(define (make-diffuse-light emit)
+  (vector (lambda (ray hit-rec)
+            (values #f #f #f))
+          (lambda (u v p)
+            (t:value emit u v p))))
