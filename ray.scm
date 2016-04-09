@@ -33,6 +33,10 @@
 (define-inline (p hit-rec)
   (vector-ref hit-rec 1))
 
+(define-inline (p-set! hit-rec value)
+  (set! (vector-ref hit-rec 1) value)
+  hit-rec)
+
 (define-inline (normal hit-rec)
   (vector-ref hit-rec 2))
 

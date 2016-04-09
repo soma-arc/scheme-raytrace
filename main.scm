@@ -8,6 +8,7 @@
   (use math.const)
   (use util)
   (use ray)
+  (use constant)
   (use geometry :prefix g:)
   (use material :prefix m:)
   (use texture :prefix t:)
@@ -19,7 +20,6 @@
 
 (select-module main)
 
-(define +max-float+ 999999999999)
 (define +max-depth+ 100)
 
 (define +black+ (v:vec3 0 0 0))
@@ -186,8 +186,12 @@
              (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
              (g:make-xz-rect 0 555 0 555 0 white)
              (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))
-             (g:make-box (v:vec3 130 0 65) (v:vec3 295 165 230) white)
-             (g:make-box (v:vec3 265 0 295) (v:vec3 430 330 460) white)
+             (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 165 165) white)
+                                      -18)
+                          (v:vec3 130 0 65))
+             (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 330 165) white)
+                                      15)
+                          (v:vec3 265 0 295))
              ))))
 
 (define *tex* #f)
