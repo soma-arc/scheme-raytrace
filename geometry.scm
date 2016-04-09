@@ -385,4 +385,38 @@
                 (values #t box))
               (material obj)))))
 
+(define (make-constant-medium obj density a)
+  (let ((phase-function (m:make-lambertian a) ;(make-isotropic a)
+                        ))
+    (vector (lambda (ray t-min t-max)
+              (receive (hit-r1? hit-rec1)
+                       (hit obj ray (- +max-float+) +max-float+)
+                       (if hit-r1?
+                           (receive (hit-r2? hit-rec2)
+                                    (hit obj ray (+ (t hit-rec1) 0.0001) +max-float+)
+                                    (if hit-r2?
+                                        (let* ((t1 (if (< (t hit-rec1) t-min) t-min (t hit-rec1)))
+                                               (t2 (if (> (t hit-rec2) t-max) t-max (t hit-rec2))))
+                                          (if (>= t1 t2)
+                                              (values #f #f)
+                                              (let* ((t1 (if (< t1 0) 0 t1))
+                                                     (distance-inside-boundary (* (- t2 t1)
+                                                                                  (v:length (dir ray))))
+                                                     (hit-distance (* (- (/ 1 density))
+                                                                      (log (random-real)))))
+                                                (if (< hit-distance distance-inside-boundary)
+                                                    (let* ((nt (+ t1 (/ hit-distance
+                                                                        (v:length (dir ray)))))
+                                                           (np (point-at-parameter ray nt)))
+                                                      (values #t (make-hit-record nt np
+                                                                                  (v:vec3 1 0 0)
+                                                                                  phase-function
+                                                                                  0 0)))
+                                                    (values #f #f)))))
+                                        (values #f #f)))
+                           (values #f #f))
+                       ))
+            (lambda (t0 t1)
+              (bounding-box obj t0 t1))
+            phase-function)))
 
