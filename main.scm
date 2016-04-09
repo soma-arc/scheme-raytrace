@@ -185,11 +185,14 @@
 ;             (g:make-xz-rect 113 443 127 432 554 light)
              (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
              (g:make-xz-rect 0 555 0 555 0 white)
-             (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))))))
+             (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))
+             (g:make-box (v:vec3 130 0 65) (v:vec3 295 165 230) white)
+             (g:make-box (v:vec3 265 0 295) (v:vec3 430 330 460) white)
+             ))))
 
 (define *tex* #f)
-(define *size-x* 500)
-(define *size-y* 500)
+(define *size-x* 200)
+(define *size-y* 200)
 (define *image* (make-u8vector (* *size-x* *size-y* 3) 0))
 (define *raw-data* (make-vector (* *size-x* *size-y*) 0))
 (define *current-y* 0)
@@ -356,4 +359,5 @@
 ;(trace-all 1)
 
 (define *gl-thread* (make-thread (cut start-glut)))
-(thread-start! *gl-thread*)
+;(thread-start! *gl-thread*)
+
