@@ -105,10 +105,10 @@
                                         (v:prod attenuation
                                                 (col scattered obj-list (+ 1 depth))))
                                  emitted))
-                           +black+ ;;+black+ no hit
-                           ;; (let* ((unit-dir (v:unit (dir r)))
-                           ;;        (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
-                           ;;   (sky-color t))
+                           ;;+black+ ;;+black+ no hit
+                           (let* ((unit-dir (v:unit (dir r)))
+                                  (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
+                             (sky-color t))
                            )))))
     (col r obj-list 0)))
 
@@ -195,16 +195,41 @@
              ))))
 
 (define cornell-smoke
+  (let* ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
+         (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
+         (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
+         (light (m:make-diffuse-light (t:constant-texture (v:vec3 3 3 3))))
+         (b1 (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 165 165) white)
+                                      -18)
+                          (v:vec3 130 0 65)))
+         (b2 (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 330 165) white)
+                                      15)
+                          (v:vec3 265 0 295))))
+    (g:make-scene
+     (list (g:flip-normals (g:make-yz-rect 0 555 0 555 555 green))
+           (g:make-yz-rect 0 555 0 555 0 red)
+                                        ;             (g:make-xz-rect 213 343 227 332 554 light)
+           (g:make-xz-rect 113 443 127 432 554 light)
+           (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
+           (g:make-xz-rect 0 555 0 555 0 white)
+           (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))
+           (g:make-constant-medium b1 0.01 (t:constant-texture (v:vec3 1 1 1)))
+           (g:make-constant-medium b2 0.01 (t:constant-texture (v:vec3 0 0 0)))
+           ))))
+
+(define klein-scene
+  (let ((white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
+        (red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05)))))
+    (g:make-scene
+     (list (g:make-sphere (v:vec3 0 -1003 -1) 1000 white)
+           (g:make-klein (v:vec3 0 2 0) red)))))
+
+(define cornell-klein
   (let ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
+        (blue (m:make-lambertian (t:constant-texture (v:vec3 0.05 0.65 0.65))))
         (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
         (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
-        (light (m:make-diffuse-light (t:constant-texture (v:vec3 3 3 3))))
-        (b1 (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 165 165) white)
-                                     -18)
-                         (v:vec3 130 0 65)))
-        (b2 (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 330 165) white)
-                                     15)
-                         (v:vec3 265 0 295))))
+        (light (m:make-diffuse-light (t:constant-texture (v:vec3 3 3 3)))))
       (g:make-scene
        (list (g:flip-normals (g:make-yz-rect 0 555 0 555 555 green))
              (g:make-yz-rect 0 555 0 555 0 red)
@@ -213,9 +238,9 @@
              (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
              (g:make-xz-rect 0 555 0 555 0 white)
              (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))
-             (make-constant-medium b1 0.01 (t:constant-texture (v:vec3 1 1 1)))
-             (make-constant-medium b2 0.01 (t:constant-texture (v:vec3 0 0 0)))
+             (g:make-klein (v:vec3 250 200 280) blue)
              ))))
+
 
 (define *tex* #f)
 (define *size-x* 200)
@@ -226,10 +251,11 @@
 
 (define *camera*
   (let ((lookfrom (v:vec3 278 278 -800))
-;        (lookfrom (v:vec3 15 5 3))
+;        (lookfrom (v:vec3 10 5 10))
+;        (lookfrom (v:vec3 10 5 3))
 ;        (lookfrom (v:vec3 0 2 5))
         (lookat (v:vec3 278 278 0))
-        (lookat (v:vec3 0 0 0))
+;        (lookat (v:vec3 0 2 0))
         (aperture 0)
         (dist-to-focus 1))
     (cam:make-camera lookfrom
@@ -242,7 +268,9 @@
 (define *max-sample* 20)
 
 (define *obj-list*
-  cornell-box
+;;  cornell-box
+;;  klein-scene
+    cornell-klein
   ;(random-scene)
 ;  test-scene2
   ;; (let ((scene (random-scene)))
@@ -386,5 +414,4 @@
 ;(trace-all 1)
 
 (define *gl-thread* (make-thread (cut start-glut)))
-;(thread-start! *gl-thread*)
-
+(thread-start! *gl-thread*)
