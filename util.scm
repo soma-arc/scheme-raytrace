@@ -1,5 +1,6 @@
 (define-module util
   (use srfi-27)
+  (use math.const)
   (use vec :prefix v:)
   (export-all))
 
@@ -32,4 +33,13 @@
             (if (< (v:dot dir n) 0)
                 (v:scale dir -1)
                 dir))))))
+
+(define (random-cosine-direction)
+  (let* ((r1 (random-real))
+         (r2 (random-real))
+         (z (sqrt (- 1 r2)))
+         (phi (* 2 pi r1))
+         (x (* (cos phi) 2 (sqrt r2)))
+         (y (* (sin phi) 2 (sqrt r2))))
+    (v:vec3 x y z)))
 

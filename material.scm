@@ -5,7 +5,9 @@
   (use vec :prefix v:)
   (use ray)
   (use util)
+  (use onb)
   (use texture :prefix t:)
+  (use math.const)
   (export-all))
 
 (select-module material)
@@ -13,18 +15,25 @@
 (define (scatter material ray hit-rec)
   ((vector-ref material 0) ray hit-rec))
 
+(define (scattering-pdf material ray hit-rec scattered)
+  ((vector-ref material 1) ray hit-rec scattered))
+
 (define (emitted material u v p)
-  ((vector-ref material 1) u v p))
+  ((vector-ref material 2) u v p))
 
 (define (make-lambertian albedo)
   (vector (lambda (ray hit-rec)
-            (let ((target (v:sum (p hit-rec)
-                                 (normal hit-rec)
-                                 ;(random-dir-over-hemisphere (normal hit-rec))
-                                 (random-in-unit-sphere))))
+            (let* ((uvw (make-onb-from-w (normal hit-rec)))
+                   (target (local uvw (random-cosine-direction)))
+                   (scattered (make-ray (p hit-rec) (v:unit target))))
               (values #t
-                      (make-ray (p hit-rec) (v:diff target (p hit-rec)))
-                      (t:value albedo 0 0 (p hit-rec)))))
+                      scattered
+                      (t:value albedo 0 0 (p hit-rec))
+                      (/ (v:dot (w uvw) (dir scattered))  pi))))
+          (lambda (ray hit-rec scattered)
+            (let* ((cosine (v:dot (normal hit-rec) (v:unit (dir scattered))))
+                   (cosine (if (< cosine 0) 0 cosine)))
+              (/ cosine pi)))
           (lambda (u v p)
             (v:vec3 0 0 0))
           albedo))
@@ -93,6 +102,8 @@
 
 (define (make-diffuse-light emit)
   (vector (lambda (ray hit-rec)
-            (values #f #f #f))
+            (values #f #f #f #f))
+          (lambda (ray hit-rec scattered)
+            #f)
           (lambda (u v p)
             (t:value emit u v p))))

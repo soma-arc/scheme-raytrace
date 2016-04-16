@@ -95,20 +95,23 @@
               (receive (hit? hit-rec)
                        (g:hit obj-list r 0.001 +max-float+)
                        (if hit?
-                           (let*-values (((valid? scattered attenuation)
+                           (let*-values (((valid? scattered attenuation pdf)
                                           (m:scatter (material hit-rec) r hit-rec))
                                          ((emitted)
                                           (m:emitted (material hit-rec)
                                                      (u hit-rec) (v hit-rec) (p hit-rec))))
                              (if (and (< depth +max-depth+) valid?)
                                  (v:sum emitted
-                                        (v:prod attenuation
-                                                (col scattered obj-list (+ 1 depth))))
+                                        (v:scale (v:prod (v:scale attenuation
+                                                                  (m:scattering-pdf (material hit-rec)
+                                                                                    r hit-rec scattered))
+                                                         (col scattered obj-list (+ 1 depth)))
+                                                 (/ 1 pdf)))
                                  emitted))
-                           ;;+black+ ;;+black+ no hit
-                           (let* ((unit-dir (v:unit (dir r)))
-                                  (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
-                             (sky-color t))
+                           +black+ ;;+black+ no hit
+                           ;; (let* ((unit-dir (v:unit (dir r)))
+                           ;;        (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
+                           ;;   (sky-color t))
                            )))))
     (col r obj-list 0)))
 
@@ -181,8 +184,8 @@
       (g:make-scene
        (list (g:flip-normals (g:make-yz-rect 0 555 0 555 555 green))
              (g:make-yz-rect 0 555 0 555 0 red)
-;             (g:make-xz-rect 213 343 227 332 554 light)
-             (g:make-xz-rect 113 443 127 432 554 light)
+             (g:make-xz-rect 213 343 227 332 554 light)
+             ;(g:make-xz-rect 113 443 127 432 554 light)
              (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
              (g:make-xz-rect 0 555 0 555 0 white)
              (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))
@@ -268,9 +271,9 @@
 (define *max-sample* 20)
 
 (define *obj-list*
-;;  cornell-box
+  cornell-box
 ;;  klein-scene
-    cornell-klein
+;;    cornell-klein
   ;(random-scene)
 ;  test-scene2
   ;; (let ((scene (random-scene)))
@@ -414,4 +417,6 @@
 ;(trace-all 1)
 
 (define *gl-thread* (make-thread (cut start-glut)))
-(thread-start! *gl-thread*)
+;(thread-start! *gl-thread*)
+
+
