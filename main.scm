@@ -100,14 +100,25 @@
                                          ((emitted)
                                           (m:emitted (material hit-rec)
                                                      r hit-rec
-                                                     (u hit-rec) (v hit-rec) (p hit-rec))))
-                             (if (and (< depth +max-depth+) valid?)
-                                 (v:sum emitted
-                                        (v:scale (v:prod (v:scale attenuation
-                                                                  (m:scattering-pdf (material hit-rec)
-                                                                                    r hit-rec scattered))
-                                                         (col scattered obj-list (+ 1 depth)))
-                                                 (/ 1 pdf)))
+                                                     (u hit-rec) (v hit-rec) (p hit-rec)))
+                                         ((on-light) (v:vec3 (+ 213 (* (random-real) (- 343 213)))
+                                                             554
+                                                             (+ 227 (* (random-real) (- 332 227)))))
+                                         ((to-light) (v:diff on-light (p hit-rec)))
+                                         ((distance-squared) (v:sq-len to-light))
+                                         ((to-light) (v:unit to-light)))
+                             (if (and (< depth +max-depth+) valid? (>= (v:dot to-light (normal hit-rec)) 0))
+                                 (let* ((light-area (* (- 343 213) (- 332 227)))
+                                        (light-cosine (abs (v:y to-light))))
+                                   (if (< light-cosine 0.00000001)
+                                       emitted
+                                       (let ((scattered (make-ray (p hit-rec) to-light)))
+                                         (v:sum emitted
+                                                (v:scale (v:prod (v:scale attenuation
+                                                                          (m:scattering-pdf (material hit-rec)
+                                                                                            r hit-rec scattered))
+                                                                 (col scattered obj-list (+ 1 depth)))
+                                                         (/ 1 (/ distance-squared (* light-cosine light-area))))))))
                                  emitted))
                            +black+ ;;+black+ no hit
                            ;; (let* ((unit-dir (v:unit (dir r)))
