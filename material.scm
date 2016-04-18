@@ -18,8 +18,8 @@
 (define (scattering-pdf material ray hit-rec scattered)
   ((vector-ref material 1) ray hit-rec scattered))
 
-(define (emitted material u v p)
-  ((vector-ref material 2) u v p))
+(define (emitted material ray hit-rec u v p)
+  ((vector-ref material 2) ray hit-rec u v p))
 
 (define (make-lambertian albedo)
   (vector (lambda (ray hit-rec)
@@ -34,7 +34,7 @@
             (let* ((cosine (v:dot (normal hit-rec) (v:unit (dir scattered))))
                    (cosine (if (< cosine 0) 0 cosine)))
               (/ cosine pi)))
-          (lambda (u v p)
+          (lambda (ray hit-rec u v p)
             (v:vec3 0 0 0))
           albedo))
 
@@ -52,7 +52,7 @@
               (values (> (v:dot (dir scattered) (normal hit-rec)) 0)
                       scattered
                       (t:value albedo 0 0 (p hit-rec)))))
-          (lambda (u v p)
+          (lambda (ray hit-rec u v p)
             (v:vec3 0 0 0))
           albedo fuzz))
 
@@ -96,7 +96,7 @@
                                              (make-ray (p hit-rec) reflected)
                                              (make-ray (p hit-rec) refracted))))
                          (values #t scattered attenuation)))))
-          (lambda (u v p)
+          (lambda (ray hit-rec u v p)
             (v:vec3 0 0 0))
           ref-idx))
 
@@ -105,5 +105,7 @@
             (values #f #f #f #f))
           (lambda (ray hit-rec scattered)
             #f)
-          (lambda (u v p)
-            (t:value emit u v p))))
+          (lambda (ray hit-rec u v p)
+            (if (< (v:dot (normal hit-rec) (dir ray)) 0.0)
+                (t:value emit u v p)
+                (v:vec3 0 0 0)))))

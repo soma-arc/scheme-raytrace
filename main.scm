@@ -99,6 +99,7 @@
                                           (m:scatter (material hit-rec) r hit-rec))
                                          ((emitted)
                                           (m:emitted (material hit-rec)
+                                                     r hit-rec
                                                      (u hit-rec) (v hit-rec) (p hit-rec))))
                              (if (and (< depth +max-depth+) valid?)
                                  (v:sum emitted
@@ -184,8 +185,8 @@
       (g:make-scene
        (list (g:flip-normals (g:make-yz-rect 0 555 0 555 555 green))
              (g:make-yz-rect 0 555 0 555 0 red)
-             (g:make-xz-rect 213 343 227 332 554 light)
-             ;(g:make-xz-rect 113 443 127 432 554 light)
+             (g:flip-normals (g:make-xz-rect 213 343 227 332 554 light))
+;             (g:flip-normals (g:make-xz-rect 113 443 127 432 554 light))
              (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
              (g:make-xz-rect 0 555 0 555 0 white)
              (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))
@@ -211,8 +212,8 @@
     (g:make-scene
      (list (g:flip-normals (g:make-yz-rect 0 555 0 555 555 green))
            (g:make-yz-rect 0 555 0 555 0 red)
-                                        ;             (g:make-xz-rect 213 343 227 332 554 light)
-           (g:make-xz-rect 113 443 127 432 554 light)
+           ;(g:flip-normals (g:make-xz-rect 213 343 227 332 554 light))
+           (g:flip-normals (g:make-xz-rect 113 443 127 432 554 light))
            (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
            (g:make-xz-rect 0 555 0 555 0 white)
            (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))
@@ -236,8 +237,8 @@
       (g:make-scene
        (list (g:flip-normals (g:make-yz-rect 0 555 0 555 555 green))
              (g:make-yz-rect 0 555 0 555 0 red)
-;             (g:make-xz-rect 213 343 227 332 554 light)
-             (g:make-xz-rect 113 443 127 432 554 light)
+;             (g:flip-normals (g:make-xz-rect 213 343 227 332 554 light))
+             (g:flip-normals (g:make-xz-rect 113 443 127 432 554 light))
              (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
              (g:make-xz-rect 0 555 0 555 0 white)
              (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))
