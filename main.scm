@@ -15,6 +15,7 @@
   (use camera :prefix cam:)
   (use gauche.threads)
   (use gauche.uvector)
+  (use pdf)
   (use gl)
   (use gl.glut))
 
@@ -102,12 +103,18 @@
                                                      r hit-rec
                                                      (u hit-rec) (v hit-rec) (p hit-rec))))
                              (if (and (< depth +max-depth+) valid?)
-                                 (v:sum emitted
-                                        (v:scale (v:prod (v:scale attenuation
-                                                                  (m:scattering-pdf (material hit-rec)
-                                                                                    r hit-rec scattered))
-                                                         (col scattered obj-list (+ 1 depth)))
-                                                 (/ 1 pdf)))
+                                 (let* ((light-shape (g:make-xz-rect 213 343 227 332 554 0))
+                                        (p0 (make-hitable-pdf light-shape (p hit-rec)))
+                                        (p1 (make-cosine-pdf (normal hit-rec)))
+                                        (mix-pdf (make-mixture-pdf p0 p1))
+                                        (scattered (make-ray (p hit-rec) (generate mix-pdf)))
+                                        (pdf-val (pdf-value mix-pdf (dir scattered))))
+                                   (v:sum emitted
+                                          (v:scale (v:prod (v:scale attenuation
+                                                                    (m:scattering-pdf (material hit-rec)
+                                                                                      r hit-rec scattered))
+                                                           (col scattered obj-list (+ 1 depth)))
+                                                   (/ 1 pdf-val))))
                                  emitted))
                            +black+ ;;+black+ no hit
                            ;; (let* ((unit-dir (v:unit (dir r)))

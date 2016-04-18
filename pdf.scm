@@ -1,0 +1,41 @@
+(define-module pdf
+  (use util)
+  (use onb :prefix onb:)
+  (use vec :prefix v:)
+  (use math.const)
+  (use geometry :prefix g:)
+  (use srfi-27)
+  (export-all))
+
+(select-module pdf)
+
+(define (pdf-value pdf direction)
+  ((vector-ref pdf 0) direction))
+
+(define (generate pdf)
+  ((vector-ref pdf 1)))
+
+(define (make-cosine-pdf w)
+  (let ((uvw (onb:make-onb-from-w w)))
+    (vector (lambda (direction)
+              (let ((cosine (v:dot (v:unit direction) (onb:w uvw))))
+                (if (> cosine 0)
+                    (/ cosine pi)
+                    0)))
+            (lambda ()
+              (onb:local uvw (random-cosine-direction))))))
+
+(define (make-hitable-pdf obj origin)
+  (vector (lambda (direction)
+            (g:pdf-value obj origin direction))
+          (lambda ()
+            (g:random obj origin))))
+
+(define (make-mixture-pdf p0 p1)
+  (vector (lambda (direction)
+            (+ (* 0.5 (pdf-value p0 direction))
+               (* 0.5 (pdf-value p1 direction))))
+          (lambda ()
+            (if (< (random-real) 0.5)
+                (generate p0)
+                (generate p1)))))
