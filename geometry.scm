@@ -6,7 +6,6 @@
   (use gauche.sequence)
   (use vec :prefix v:)
   (use ray)
-  (use material :prefix m:)
   (export-all))
 
 (select-module geometry)
@@ -440,7 +439,7 @@
               (material obj)))))
 
 (define (make-constant-medium obj density a)
-  (let ((phase-function (m:make-lambertian a) ;(make-isotropic a)
+  (let ((phase-function #f ;(make-isotropic a)
                         ))
     (vector (lambda (ray t-min t-max)
               (receive (hit-r1? hit-rec1)
