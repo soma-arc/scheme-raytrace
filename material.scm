@@ -6,28 +6,11 @@
   (use ray)
   (use util)
   (use onb)
-  (use pdf)
   (use texture :prefix t:)
   (use math.const)
   (export-all))
 
 (select-module material)
-
-(define-inline (make-scatter-rec specular-ray specular? attenuation pdf)
-  (vector specular-ray specular? attenuation pdf))
-
-(define-inline (scatter-specular-ray scatter-rec)
-  (vector-ref scatter-rec 0))
-
-(define-inline (scatter-specular? scatter-rec)
-  (vector-ref scatter-rec 1))
-
-(define-inline (scatter-attenuation scatter-rec)
-  (vector-ref scatter-rec 2))
-
-(define-inline (scatter-pdf scatter-rec)
-  (vector-ref scatter-rec 3))
-
 
 (define (scatter material ray hit-rec)
   ((vector-ref material 0) ray hit-rec))
@@ -40,11 +23,13 @@
 
 (define (make-lambertian albedo)
   (vector (lambda (ray hit-rec)
-            (values #t
-                    (make-scatter-rec #f
-                                      #f
-                                      (t:value albedo (u hit-rec) (v hit-rec) (p hit-rec))
-                                      (make-cosine-pdf (normal hit-rec)))))
+            (let* ((uvw (make-onb-from-w (normal hit-rec)))
+                   (target (local uvw (random-cosine-direction)))
+                   (scattered (make-ray (p hit-rec) (v:unit target))))
+              (values #t
+                      scattered
+                      (t:value albedo 0 0 (p hit-rec))
+                      (/ (v:dot (w uvw) (dir scattered))  pi))))
           (lambda (ray hit-rec scattered)
             (let* ((cosine (v:dot (normal hit-rec) (v:unit (dir scattered))))
                    (cosine (if (< cosine 0) 0 cosine)))
@@ -64,10 +49,9 @@
                                         (v:sum reflected
                                                (v:scale (random-in-unit-sphere)
                                                         fuzz)))))
-              (values #t
-                      (make-scatter-rec scattered #t albedo #f))))
-          (lambda (ray hit-rec u v p)
-            (v:vec3 0 0 0))
+              (values (> (v:dot (dir scattered) (normal hit-rec)) 0)
+                      scattered
+                      (t:value albedo 0 0 (p hit-rec)))))
           (lambda (ray hit-rec u v p)
             (v:vec3 0 0 0))
           albedo fuzz))
@@ -118,7 +102,7 @@
 
 (define (make-diffuse-light emit)
   (vector (lambda (ray hit-rec)
-            (values #f #f))
+            (values #f #f #f #f))
           (lambda (ray hit-rec scattered)
             #f)
           (lambda (ray hit-rec u v p)
