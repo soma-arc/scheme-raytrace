@@ -43,3 +43,13 @@
          (y (* (sin phi) 2 (sqrt r2))))
     (v:vec3 x y z)))
 
+(define (random-to-sphere radius distance-sq)
+  (let* ((r1 (random-real))
+         (r2 (random-real))
+         (z (+ 1 (* r2 (- (sqrt (- 1 (/ (* radius radius)
+                                        distance-sq))) 1))))
+         (phi (* 2 pi r1))
+         (x (* (cos phi) (sqrt (- 1 (* z z)))))
+         (y (* (sin phi) (sqrt (- 1 (* z z))))))
+    (v:vec3 x y z)))
+
