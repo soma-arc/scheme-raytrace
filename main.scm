@@ -116,23 +116,6 @@
                            )))))
     (col r obj-list 0)))
 
-
-            (lambda (r obj-list depth acc)
-              (if (> depth +max-depth+)
-                  +black+
-                  (receive (hit? hit-rec)
-                           (g:hit obj-list r 0.0 +max-float+)
-                           (if hit?
-                               (receive (valid? scattered attenuation)
-                                        (m:scatter (material hit-rec) r hit-rec)
-                                        (if valid?
-                                            (col scattered obj-list (inc! depth)
-                                                 (v:prod acc attenuation))
-                                            +black+))
-                               (let* ((unit-dir (v:unit (dir r)))
-                                      (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
-                                 (v:prod acc (sky-color t)))))))
-
 (define (calc-pixel-color x y nx ny camera obj-list ns)
   (let loop ((sample-count 0)
              (col (v:vec3 0 0 0)))
