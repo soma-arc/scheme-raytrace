@@ -15,7 +15,6 @@
   (use camera :prefix cam:)
   (use gauche.threads)
   (use gauche.uvector)
-  (use pdf)
   (use gl)
   (use gl.glut))
 
@@ -92,60 +91,30 @@
 
 (define (color r obj-list)
   (letrec ((col
-            (lambda (r obj-list light-shape depth)
+            (lambda (r obj-list depth)
               (receive (hit? hit-rec)
                        (g:hit obj-list r 0.001 +max-float+)
                        (if hit?
-                           (let*-values (((valid? scatter-rec)
+                           (let*-values (((valid? scattered attenuation pdf)
                                           (m:scatter (material hit-rec) r hit-rec))
                                          ((emitted)
                                           (m:emitted (material hit-rec)
                                                      r hit-rec
                                                      (u hit-rec) (v hit-rec) (p hit-rec))))
                              (if (and (< depth +max-depth+) valid?)
-                                 (if (m:scatter-specular? scatter-rec)
-                                     (v:prod (m:scatter-attenuation scatter-rec)
-                                             (col (m:scatter-specular-ray scatter-rec)
-                                                  obj-list
-                                                  light-shape
-                                                  (+ 1 depth)))
-                                     (let* ((p0 (make-hitable-pdf light-shape (p hit-rec)))
-                                            (p1 (m:scatter-pdf scatter-rec))
-                                            (mix-pdf (make-mixture-pdf p0 p1))
-                                            (scattered (make-ray (p hit-rec) (generate mix-pdf)))
-                                            (pdf-val (pdf-value mix-pdf (dir scattered))))
-                                       (v:sum emitted
-                                              (v:scale (v:prod (v:scale (m:scatter-attenuation scatter-rec)
-                                                                        (m:scattering-pdf (material hit-rec)
-                                                                                          r hit-rec scattered))
-                                                               (col scattered obj-list light-shape (+ 1 depth)))
-                                                       (/ 1 pdf-val)))))
+                                 (v:sum emitted
+                                        (v:scale (v:prod (v:scale attenuation
+                                                                  (m:scattering-pdf (material hit-rec)
+                                                                                    r hit-rec scattered))
+                                                         (col scattered obj-list (+ 1 depth)))
+                                                 (/ 1 pdf)))
                                  emitted))
                            +black+ ;;+black+ no hit
                            ;; (let* ((unit-dir (v:unit (dir r)))
                            ;;        (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
                            ;;   (sky-color t))
                            )))))
-;    (display obj-list)
-    (col r obj-list (g:make-xz-rect 213 343 227 332 554 0) 0)))
-;;                                 (let* ((light-shape (g:make-xz-rect 213 343 227 332 554 0))
-
-
-(lambda (r obj-list depth acc)
-  (if (> depth +max-depth+)
-      +black+
-      (receive (hit? hit-rec)
-               (g:hit obj-list r 0.0 +max-float+)
-               (if hit?
-                   (receive (valid? scattered attenuation)
-                            (m:scatter (material hit-rec) r hit-rec)
-                            (if valid?
-                                (col scattered obj-list (inc! depth)
-                                     (v:prod acc attenuation))
-                                +black+))
-                   (let* ((unit-dir (v:unit (dir r)))
-                          (t (* 0.5 (+ 1.0 (v:y unit-dir)))))
-                     (v:prod acc (sky-color t)))))))
+    (col r obj-list 0)))
 
 (define (calc-pixel-color x y nx ny camera obj-list ns)
   (let loop ((sample-count 0)
@@ -195,8 +164,7 @@
   (let ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
         (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
         (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
-        (light (m:make-diffuse-light (t:constant-texture (v:vec3 15 15 15))))
-        (alminum (m:make-metal (v:vec3 0.8 0.85 0.88) 0)))
+        (light (m:make-diffuse-light (t:constant-texture (v:vec3 3 3 3)))))
       (g:make-scene
        (list (g:flip-normals (g:make-yz-rect 0 555 0 555 555 green))
              (g:make-yz-rect 0 555 0 555 0 red)
@@ -208,7 +176,7 @@
              (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 165 165) white)
                                       -18)
                           (v:vec3 130 0 65))
-             (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 330 165) alminum)
+             (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 330 165) white)
                                       15)
                           (v:vec3 265 0 295))
              ))))
@@ -217,7 +185,7 @@
   (let* ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
          (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
          (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
-         (light (m:make-diffuse-light (t:constant-texture (v:vec3 15 15 15))))
+         (light (m:make-diffuse-light (t:constant-texture (v:vec3 3 3 3))))
          (b1 (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 165 165) white)
                                       -18)
                           (v:vec3 130 0 65)))
@@ -248,12 +216,12 @@
         (blue (m:make-lambertian (t:constant-texture (v:vec3 0.05 0.65 0.65))))
         (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
         (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
-        (light (m:make-diffuse-light (t:constant-texture (v:vec3 15 15 15)))))
+        (light (m:make-diffuse-light (t:constant-texture (v:vec3 3 3 3)))))
       (g:make-scene
        (list (g:flip-normals (g:make-yz-rect 0 555 0 555 555 green))
              (g:make-yz-rect 0 555 0 555 0 red)
-             (g:flip-normals (g:make-xz-rect 213 343 227 332 554 light))
-;             (g:flip-normals (g:make-xz-rect 113 443 127 432 554 light))
+;             (g:flip-normals (g:make-xz-rect 213 343 227 332 554 light))
+             (g:flip-normals (g:make-xz-rect 113 443 127 432 554 light))
              (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
              (g:make-xz-rect 0 555 0 555 0 white)
              (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))
