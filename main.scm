@@ -16,6 +16,7 @@
   (use gauche.threads)
   (use gauche.uvector)
   (use gl)
+  (use bezier :prefix b:)
   (use gl.glut))
 
 (select-module main)
@@ -402,6 +403,31 @@
 ;(trace-line *scene* 30 10)
 ;(trace-all *scene* 1)
 
+(define *bez*
+  (b:make-bezier (v:vec3 10 10 0)
+                 (v:vec3 30 100 0)
+                 (v:vec3 160 180 0)
+                 (v:vec3 180 100 0)))
+
+(define (draw-bezier bezier r g b)
+  (let loop ((t 0))
+    (if (< t 1)
+        (let* ((p (b:bezier-point bezier t))
+               (x (max (floor->exact (v:x p)) 0))
+               (y (max (floor->exact (v:y p)) 0))
+               (i (* (+ (* y *size-x*) x) 3)))
+          (u8vector-set! *image* i       r)
+          (u8vector-set! *image* (+ i 1) g)
+          (u8vector-set! *image* (+ i 2) b)
+          (loop (+ t 0.01))))))
+
+
+(receive (b1 b2)
+         (b:bezier-split *bez* 0.5)
+         (draw-bezier b1 255 255 255)
+         (draw-bezier b2 255 0 0 ))
+
+(set-texture)
 (define *gl-thread* (make-thread (cut start-glut)))
 ;(thread-start! *gl-thread*)
 
