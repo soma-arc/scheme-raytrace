@@ -24,7 +24,13 @@
 (define-inline (scene-num-obj scene)
   (length (scene-obj-list scene)))
 
-(define (make-scene obj-list)
+(define-inline (scene-camera scene)
+  (vector-ref scene 3))
+
+(define-inline (scene-sky-function scene)
+  (vector-ref scene 4))
+
+(define (make-scene obj-list camera sky-function)
   (vector
    (lambda (r t-min t-max)
      (let loop ((obj-list obj-list)
@@ -44,7 +50,7 @@
                               hit-anything
                               closest-so-far
                               rec))))))
-   #f obj-list))
+   #f obj-list camera sky-function))
 
 (define (bounding-box obj t0 t1)
   ((vector-ref obj 1) t0 t1))
@@ -297,7 +303,7 @@
                     (make-yz-rect (v:y p0) (v:y p1) (v:z p0) (v:z p1)
                                   (v:x p1) material)
                     (flip-normals (make-yz-rect (v:y p0) (v:y p1) (v:z p0) (v:z p1)
-                                                (v:x p0) material)))))
+                                                (v:x p0) material))) #f #f))
         (aabb (make-aabb p0 p1)))
     (vector (lambda (ray t-min t-max)
               (hit box ray t-min t-max))
