@@ -15,6 +15,7 @@
   (use camera :prefix cam:)
   (use gauche.threads)
   (use gauche.uvector)
+  (use bezier :prefix b:)
   (use gl)
   (use gl.glut))
 
@@ -136,10 +137,10 @@
                      dist-to-focus 0 1)))
 
 (define *camera*
-  (let ((lookfrom (v:vec3 10 5 10))
+  (let ((lookfrom (v:vec3 0 5 3))
 ;        (lookfrom (v:vec3 10 5 3))
 ;        (lookfrom (v:vec3 0 2 5))
-        (lookat (v:vec3 0 2 0))
+        (lookat (v:vec3 0 0 0))
         (aperture 0)
         (dist-to-focus 1))
     (cam:make-camera lookfrom
@@ -169,6 +170,22 @@
                         (m:make-dielectric 1.5)))
    *camera*
    black))
+
+(define test-bezier
+  (let ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05)))))
+    (g:make-scene
+     (list (g:make-sphere (v:vec3 0 -100.5 -1) 100
+                          (m:make-lambertian
+                           (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
+                                              (t:constant-texture (v:vec3 0.9 0.9 0.9)))
+                           ))
+           (b:make-bezier (v:vec3 -1 0 0)
+                          (v:vec3 -0.5 1 0)
+                          (v:vec3 0.5 1 0)
+                          (v:vec3 1 0 0)
+                          3 red))
+     *camera*
+     sky-color)))
 
 (define test-scene2
   (let ((per-tex (t:marble-texture 1)))
@@ -203,6 +220,28 @@
            (g:translate (g:rotate-y (g:make-box (v:vec3 0 0 0) (v:vec3 165 330 165) white)
                                     15)
                         (v:vec3 265 0 295))
+           )
+     *cornell-camera*
+     sky-color)))
+
+(define cornell-bezier
+  (let ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
+        (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
+        (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
+        (light (m:make-diffuse-light (t:constant-texture (v:vec3 3 3 3)))))
+    (g:make-scene
+     (list (g:flip-normals (g:make-yz-rect 0 555 0 555 555 green))
+           (g:make-yz-rect 0 555 0 555 0 red)
+           (g:flip-normals (g:make-xz-rect 213 343 227 332 554 light))
+                                        ;             (g:flip-normals (g:make-xz-rect 113 443 127 432 554 light))
+           (g:flip-normals (g:make-xz-rect 0 555 0 555 555 white))
+           (g:make-xz-rect 0 555 0 555 0 white)
+           (g:flip-normals (g:make-xy-rect 0 555 0 555 555 white))
+           (b:make-bezier (v:vec3 130 0 65)
+                          (v:vec3 150 0 190)
+                          (v:vec3 130 0 190)
+                          (v:vec3 265 0 295)
+                          10 red)
            )
      *cornell-camera*
      sky-color)))
@@ -269,7 +308,7 @@
 
 (define *rendering?* #f)
 
-(define *scene* cornell-box)
+(define *scene* test-bezier)
 
 (define (save-as-ppm nx ny)
   (with-output-to-file "test.ppm"
@@ -398,11 +437,49 @@
   (glut-keyboard-func key)
   (glut-main-loop))
 
+(define *bez*
+  (b:make-bezier (v:vec3 10 10 0)
+                 (v:vec3 30 100 0)
+                 (v:vec3 160 180 0)
+                 (v:vec3 180 100 0)
+                 0.1
+                 #f))
+
+(define (draw-bezier bezier r g b)
+  (let loop ((t 0))
+    (if (< t 1)
+        (let* ((p (b:bezier-point bezier t))
+               (x (max (floor->exact (v:x p)) 0))
+               (y (max (floor->exact (v:y p)) 0))
+               (i (* (+ (* y *size-x*) x) 3)))
+          (u8vector-set! *image* i       r)
+          (u8vector-set! *image* (+ i 1) g)
+          (u8vector-set! *image* (+ i 2) b)
+          (loop (+ t 0.01))))))
+
+(define (draw-tan-vec bezier t r g b)
+  (let* ((tan-vec (b:bezier-tan-vec bezier t))
+         (p (b:bezier-point bezier t)))
+    (let loop ((param 0))
+      (if (< param 50)
+          (let* ((vp (v:sum p (v:scale tan-vec param)))
+                 (x (max (floor->exact (v:x vp)) 0))
+                 (y (max (floor->exact (v:y vp)) 0))
+                 (i (* (+ (* y *size-x*) x) 3)))
+            (u8vector-set! *image* i       r)
+            (u8vector-set! *image* (+ i 1) g)
+            (u8vector-set! *image* (+ i 2) b)
+            (loop (+ param 0.1)))))))
+
+;; (receive (b1 b2)
+;;          (b:bezier-split *bez* 0.5)
+;;          (draw-bezier b1 255 255 255)
+;;          (draw-bezier b2 255 0 0 )
+;;          (draw-tan-vec *bez* 0 0 255 0)
+;;          (draw-tan-vec *bez* 1 0 255 0))
 
 ;(trace-line *scene* 30 10)
 ;(trace-all *scene* 1)
 
 (define *gl-thread* (make-thread (cut start-glut)))
 ;(thread-start! *gl-thread*)
-
-
