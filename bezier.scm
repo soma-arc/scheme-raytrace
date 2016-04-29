@@ -5,6 +5,7 @@
   (use vec :prefix v:)
   (use constant)
   (use geometry :prefix g:)
+  (use math.const)
   (export-all))
 
 (select-module bezier)
@@ -19,17 +20,27 @@
          (lx (v:x ray-dir))
          (ly (- (v:z ray-dir)))
          (lz (v:y ray-dir))
-         (d (sqrt (+ (* lx lx) (* lz lz)))))
+         (d (sqrt (+ (* lx lx) (* lz lz))))
+         (rotation (if (= d 0)
+                       (let ((angle (if (>= ly 0)
+                                        (- pi/2)
+                                        pi/2)))
+                         (array (shape 0 4 0 4)
+                                1 0 0 0
+                                0 (cos angle) (- (sin angle)) 0
+                                0 (sin angle) (cos angle) 0
+                                0 0 0 1))
+                       (array (shape 0 4 0 4)
+                              (/ lz d) (/ (* -1 lx ly) d) lx 0
+                              0 d ly 0
+                              (/ (- lx) d) (/ (* -1 ly lz) d) lz 0
+                              0 0 0 1))))
     (array-mul (array (shape 0 4 0 4)
                       1 0 0 0
                       0 1 0 0
                       0 0 1 0
                       ox oy oz 1)
-               (array (shape 0 4 0 4)
-                      (/ lz d) (/ (* -1 lx ly) d) lx 0
-                      0 d ly 0
-                      (/ (- lx) d) (/ (* -1 ly lz) d) lz 0
-                      0 0 0 1))))
+               rotation)))
 
 (define (internally-divide a b t)
   (v:sum (v:scale a (- 1 t))
@@ -182,8 +193,9 @@
                                                                 (loop (max x y m) (inc! i)))))))
                                                 (ceiling->exact (log (/ (* (sqrt 2) n (- n 1) l0) (* 8 eps)) 4))))
                                  ((hit? t) (converge (+ 1 max-depth) transformed 0 1 t-max)))
-;                      (display (format "max-depth ~A~%" max-depth))
+                     ;; (display (format "max-depth ~A~%" max-depth))
                      ;; (display (format "dir ~A~%origin ~A~%" (dir r) (origin r)))
+                     ;; (display (format "~A~%" (transform (v:vec3 0 0 0) tr)))
                      ;; (display (format "bezier~%~Atransformed~%~A"
                      ;;                  (to-string)
                      ;;                  (bezier-to-string transformed)))
@@ -195,9 +207,6 @@
                      ;;                  (bezier-compare transformed 0 1)
                      ;;                  (bezier-compare transformed 1 2)
                      ;;                  (bezier-compare transformed 2 3)))
-                     ;; (if (not (and t (< t-min t)))
-                     ;;     (display t)
-                     ;;     (display "mimiimimn\n"))
                      (if (and hit? (< t-min t))
                          (values #t (make-hit-record t
                                                      (point-at-parameter r t)
