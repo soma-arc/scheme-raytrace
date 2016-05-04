@@ -137,7 +137,7 @@
                      dist-to-focus 0 1)))
 
 (define *camera*
-  (let ((lookfrom (v:vec3 0 5 3))
+  (let ((lookfrom (v:vec3 0 3 -3))
 ;        (lookfrom (v:vec3 10 5 3))
 ;        (lookfrom (v:vec3 0 2 5))
         (lookat (v:vec3 0 0 0))
@@ -172,18 +172,36 @@
    black))
 
 (define test-bezier
-  (let ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05)))))
+  (let ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
+        (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
+        (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
+        (blue (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.15 0.45)))))
     (g:make-scene
-     (list (g:make-sphere (v:vec3 0 -100.5 -1) 100
-                          (m:make-lambertian
-                           (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
-                                              (t:constant-texture (v:vec3 0.9 0.9 0.9)))
-                           ))
-           (b:make-bezier (v:vec3 -1 0 0)
-                          (v:vec3 -0.5 1 0)
-                          (v:vec3 0.5 1 0)
-                          (v:vec3 1 0 0)
-                          3 red))
+     (list
+      (g:make-sphere (v:vec3 0 -100.5 -1) 100
+                     (m:make-lambertian
+                      (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
+                                         (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
+      (g:make-sphere (v:vec3 -1 0 -1) 0.1
+                     blue)
+      (g:make-sphere (v:vec3 -0.8 1 1) 0.1
+                     blue)
+      (g:make-sphere (v:vec3 0.8 -1 1) 0.1
+                     blue)
+      (g:make-sphere (v:vec3 1 0 -1) 0.1
+                     blue)
+                                        ;      (g:make-sphere (v:vec3 0 0 0) 0.5  red)
+      ;; (b:make-bezier (v:vec3  10  0 10    )
+      ;;                (v:vec3  30  0 100   )
+      ;;                (v:vec3  160 0 180  )
+      ;;                (v:vec3  180 0 100  )
+      ;;                5 red)
+      (b:make-bezier (v:vec3 -1   0 -1)
+                     (v:vec3 -0.8 1 1)
+                     (v:vec3 0.8  -1 1)
+                     (v:vec3 1    0 -1)
+                     0.5 red)
+      )
      *camera*
      sky-color)))
 
@@ -426,6 +444,14 @@
       (save-as-ppm *size-x* *size-y*) (q))
      ((= k (char->integer #\escape)) (exit)))))
 
+(define (mouse button state x y)
+  (cond
+    ((= button GLUT_LEFT_BUTTON)
+     (when (= state GLUT_DOWN) (display (format "(~A,~A)~%" x (- 199 y))
+                                        (current-error-port))))
+    )
+  )
+
 (define (start-glut)
   (glut-init '())
   (glut-init-display-mode (logior GLUT_DOUBLE GLUT_RGB))
@@ -435,6 +461,7 @@
   (glut-reshape-func reshape)
   (glut-display-func disp)
   (glut-keyboard-func key)
+  (glut-mouse-func mouse)
   (glut-main-loop))
 
 (define *bez*
@@ -452,6 +479,7 @@
                (x (max (floor->exact (v:x p)) 0))
                (y (max (floor->exact (v:y p)) 0))
                (i (* (+ (* y *size-x*) x) 3)))
+          (display (format "~A, ~A~%" x y))
           (u8vector-set! *image* i       r)
           (u8vector-set! *image* (+ i 1) g)
           (u8vector-set! *image* (+ i 2) b)
@@ -471,15 +499,10 @@
             (u8vector-set! *image* (+ i 2) b)
             (loop (+ param 0.1)))))))
 
-;; (receive (b1 b2)
-;;          (b:bezier-split *bez* 0.5)
-;;          (draw-bezier b1 255 255 255)
-;;          (draw-bezier b2 255 0 0 )
-;;          (draw-tan-vec *bez* 0 0 255 0)
-;;          (draw-tan-vec *bez* 1 0 255 0))
 
 ;(trace-line *scene* 30 10)
 ;(trace-all *scene* 1)
 
 (define *gl-thread* (make-thread (cut start-glut)))
 ;(thread-start! *gl-thread*)
+
