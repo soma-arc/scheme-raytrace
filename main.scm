@@ -16,6 +16,7 @@
   (use gauche.threads)
   (use gauche.uvector)
   (use bezier :prefix b:)
+  (use points :prefix p:)
   (use gl)
   (use gl.glut))
 
@@ -137,7 +138,7 @@
                      dist-to-focus 0 1)))
 
 (define *camera*
-  (let ((lookfrom (v:vec3 0 3 -3))
+  (let ((lookfrom (v:vec3 0 4 -3))
 ;        (lookfrom (v:vec3 10 5 3))
 ;        (lookfrom (v:vec3 0 2 5))
         (lookat (v:vec3 0 0 0))
@@ -202,6 +203,24 @@
                      (v:vec3 1    0 -1)
                      0.5 red)
       )
+     *camera*
+     sky-color)))
+
+(define test-bezier-points
+  (let* ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
+        (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
+        (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
+        (blue (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.15 0.45))))
+        (bez  (p:bezier->objs (p:points->bezier (p:load-points "points.csv"))
+                              0.1 red)))
+    (g:make-scene
+     (apply list
+            (g:make-sphere (v:vec3 0 -100.5 -1) 100
+                     (m:make-lambertian
+                      (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
+                                         (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
+
+      bez)
      *camera*
      sky-color)))
 
@@ -326,7 +345,7 @@
 
 (define *rendering?* #f)
 
-(define *scene* test-bezier)
+(define *scene* test-bezier-points)
 
 (define (save-as-ppm nx ny)
   (with-output-to-file "test.ppm"
@@ -476,8 +495,8 @@
   (let loop ((t 0))
     (if (< t 1)
         (let* ((p (b:bezier-point bezier t))
-               (x (max (floor->exact (v:x p)) 0))
-               (y (max (floor->exact (v:y p)) 0))
+               (x (+ (/ *size-x* 2) (floor->exact (v:x p))))
+               (y (+ (/ *size-y* 2) (floor->exact (v:y p))))
                (i (* (+ (* y *size-x*) x) 3)))
           (display (format "~A, ~A~%" x y))
           (u8vector-set! *image* i       r)
@@ -498,7 +517,6 @@
             (u8vector-set! *image* (+ i 1) g)
             (u8vector-set! *image* (+ i 2) b)
             (loop (+ param 0.1)))))))
-
 
 ;(trace-line *scene* 30 10)
 ;(trace-all *scene* 1)
