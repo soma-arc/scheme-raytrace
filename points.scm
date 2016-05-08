@@ -20,8 +20,8 @@
 
 ;;tightness = 0.5
 (define  (calc-bezier-cp pt p1 p2 p3)
-  (let ((d1 (v:quot (v:diff p2 pt) 6))
-        (d2 (v:quot (v:diff p3 p1) 6)))
+  (let ((d1 (v:scale (v:diff p2 pt) (/ 1 6)))
+        (d2 (v:scale (v:diff p3 p1) (/ 1 6))))
     (list p1 (v:sum p1 d1) (v:diff p2 d2) p2)))
 
 (define (points->bezier points)
