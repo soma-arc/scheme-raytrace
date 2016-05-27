@@ -440,7 +440,7 @@
                              (v:vec3 -300 300 0)
                              (v:vec3 -300 -300 0)
                              (v:vec3 0 0 424.26)
-                             (v:vec3 0 0 424.26)))
+                             (v:vec3 0 0 -424.26)))
 (define +sphere-r+ 300)
 (define +sphere-r2+ (* +sphere-r+ +sphere-r+))
 (define klein-sphere-r 125)
