@@ -18,7 +18,8 @@
   (use bezier :prefix b:)
   (use points :prefix p:)
   (use gl)
-  (use gl.glut))
+  (use gl.glut)
+  (use gauche.time))
 
 (select-module main)
 
@@ -141,7 +142,7 @@
   (let ((lookfrom (v:vec3 0 4 -3))
 ;        (lookfrom (v:vec3 10 5 3))
 ;        (lookfrom (v:vec3 0 2 5))
-        (lookat (v:vec3 0 0 0))
+        (lookat (v:vec3 3 0 3))
         (aperture 0)
         (dist-to-focus 1))
     (cam:make-camera lookfrom
@@ -171,6 +172,52 @@
                         (m:make-dielectric 1.5)))
    *camera*
    black))
+
+
+(define (line-upped-spheres nx ny)
+  (let ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
+        (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
+        (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
+        (blue (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.15 0.45))))
+	(obj-list '()))
+    (dotimes (x nx)
+	     (dotimes (y ny)
+		      (push! obj-list
+			     (g:make-sphere (v:vec3 x 0 y) 0.5
+					    (m:make-lambertian
+					     (t:constant-texture (v:vec3 (random-real)
+									 (random-real)
+									 (random-real))))))))
+    obj-list))
+
+(define *spheres-list*
+  (line-upped-spheres 10 10))
+
+(define *bvh-node*
+  (g:make-bvh-node
+   *spheres-list* 0 0))
+
+(define test-scene-non-bvh
+  (g:make-scene
+   (apply list
+	  (g:make-sphere (v:vec3 0 -100.5 -1) 100
+			 (m:make-lambertian
+			  (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
+					     (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
+	  *spheres-list*)
+   *camera*
+   sky-color))
+
+(define test-scene-bvh
+  (g:make-scene
+   (list
+    (g:make-sphere (v:vec3 0 -100.5 -1) 100
+		   (m:make-lambertian
+		    (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
+				       (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
+    *bvh-node*)
+   *camera*
+   sky-color))
 
 (define test-bezier
   (let ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
@@ -206,23 +253,23 @@
      *camera*
      sky-color)))
 
-(define test-bezier-points
-  (let* ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
-        (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
-        (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
-        (blue (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.15 0.45))))
-        (bez  (p:bezier->objs (p:points->bezier (p:load-points "points.csv"))
-                              0.1 red)))
-    (g:make-scene
-     (apply list
-            (g:make-sphere (v:vec3 0 -100.5 -1) 100
-                     (m:make-lambertian
-                      (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
-                                         (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
+;; (define test-bezier-points
+;;   (let* ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
+;;         (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
+;;         (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
+;;         (blue (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.15 0.45))))
+;;         (bez  (p:bezier->objs (p:points->bezier (p:load-points "points.csv"))
+;;                               0.1 red)))
+;;     (g:make-scene
+;;      (apply list
+;;             (g:make-sphere (v:vec3 0 -100.5 -1) 100
+;;                      (m:make-lambertian
+;;                       (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
+;;                                          (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
 
-      bez)
-     *camera*
-     sky-color)))
+;;       bez)
+;;      *camera*
+;;      sky-color)))
 
 (define test-scene2
   (let ((per-tex (t:marble-texture 1)))
@@ -345,7 +392,7 @@
 
 (define *rendering?* #f)
 
-(define *scene* test-bezier-points)
+(define *scene* test-scene-bvh)
 
 (define (save-as-ppm nx ny)
   (with-output-to-file "test.ppm"
@@ -518,9 +565,32 @@
             (u8vector-set! *image* (+ i 2) b)
             (loop (+ param 0.1)))))))
 
-;(trace-line *scene* 30 10)
-;(trace-all *scene* 1)
+(define-macro (profiling expr)
+  `(dynamic-wind
+       profiler-start
+       (lambda () ,expr)
+       profiler-stop))
+
+;; (let ((r (cam:get-ray *camera* 0.3 0.3))
+;;       (y 20)
+;;       (x 20))
+;;   (display "non bvh")
+;;   (profiler-reset)
+;;   (profiling (g:hit test-scene-non-bvh r 0.001 +max-float+))
+;;   (profiler-show)
+;;   (display "bvh")
+;;   (profiler-reset)
+;;   (profiling (g:hit test-scene-bvh r 0.001 +max-float+))
+;;   (profiler-show)
+;;    )
 
 (define *gl-thread* (make-thread (cut start-glut)))
 ;(thread-start! *gl-thread*)
+
+;; bvh
+;(time (trace-all test-scene-bvh 1))
+
+
+;;non bvh
+;(time (trace-all test-scene-non-bvh 1))
 
