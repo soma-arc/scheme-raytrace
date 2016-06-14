@@ -85,19 +85,17 @@
                       (rb (internally-divide nbc rc t)))
                  (values (make-bezier a lb lc split-point width material)
                          (make-bezier split-point rb rc d width material)))))
-            (bbox
-             (lambda (t0 t1)
-               (let* ((min-vec (v:vec3 +max-float+ +max-float+ +max-float+))
-                      (max-vec (v:vec3 (- +max-float+) (- +max-float+) (- +max-float+))))
-                 (dotimes (i 4)
-                          (dotimes (axis 3)
-                                   (if (< (v:vec3-ref (vector-ref cp i) axis)
-                                          (v:vec3-ref min-vec axis))
-                                       (v:vec3-set! min-vec axis (v:vec3-ref (vector-ref cp i) axis)))
-                                   (if (> (v:vec3-ref (vector-ref cp i) axis)
-                                          (v:vec3-ref max-vec axis))
-                                       (v:vec3-set! max-vec axis (v:vec3-ref (vector-ref cp i) axis)))))
-                 (g:make-aabb min-vec max-vec))))
+            (bbox (let* ((min-vec (v:vec3 +max-float+ +max-float+ +max-float+))
+                         (max-vec (v:vec3 (- +max-float+) (- +max-float+) (- +max-float+))))
+                    (dotimes (i 4)
+                             (dotimes (axis 3)
+                                      (if (< (v:vec3-ref (vector-ref cp i) axis)
+                                             (v:vec3-ref min-vec axis))
+                                          (v:vec3-set! min-vec axis (v:vec3-ref (vector-ref cp i) axis)))
+                                      (if (> (v:vec3-ref (vector-ref cp i) axis)
+                                             (v:vec3-ref max-vec axis))
+                                          (v:vec3-set! max-vec axis (v:vec3-ref (vector-ref cp i) axis)))))
+                    (g:make-aabb min-vec max-vec)))
             (bezier-transform
              (lambda (mat)
                (make-bezier (transform a mat)
@@ -122,9 +120,9 @@
                (format "~A ~%~A ~%~A ~%~A~%" a b c d)))
             (converge
              (lambda (depth c v0 vn t)
-               (let* ((b (g:bounding-box c 0 0))
-                      (b-min (g:aabb-min b))
-                      (b-max (g:aabb-max b)))
+               (let*-values (((valid? b) (g:bounding-box c 0 0))
+                             ((b-min) (g:aabb-min b))
+                             ((b-max) (g:aabb-max b)))
                  (cond ((or (>= (v:z b-min) t) (<= (v:z b-max) 0.000001)
                             (>= (v:x b-min) width1) (<= (v:x b-max) (- width1))
                             (>= (v:y b-min) width1) (<= (v:y b-max) (- width1)))
@@ -215,7 +213,8 @@
                                                      0 0))
                          (values #f #f))))))
            (vector hit
-                   bbox
+                   (lambda (t0 t1)
+                     (values #t bbox))
                    cp
                    bez-p
                    split
