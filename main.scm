@@ -139,10 +139,10 @@
                      dist-to-focus 0 1)))
 
 (define *camera*
-  (let ((lookfrom (v:vec3 0 4 -3))
+  (let ((lookfrom (v:vec3 0 5 5))
 ;        (lookfrom (v:vec3 10 5 3))
 ;        (lookfrom (v:vec3 0 2 5))
-        (lookat (v:vec3 3 0 3))
+        (lookat (v:vec3 0 0 0))
         (aperture 0)
         (dist-to-focus 1))
     (cam:make-camera lookfrom
@@ -230,46 +230,73 @@
                      (m:make-lambertian
                       (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
                                          (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
-      (g:make-sphere (v:vec3 -1 0 -1) 0.1
-                     blue)
-      (g:make-sphere (v:vec3 -0.8 1 1) 0.1
-                     blue)
-      (g:make-sphere (v:vec3 0.8 -1 1) 0.1
-                     blue)
-      (g:make-sphere (v:vec3 1 0 -1) 0.1
-                     blue)
-                                        ;      (g:make-sphere (v:vec3 0 0 0) 0.5  red)
-      ;; (b:make-bezier (v:vec3  10  0 10    )
-      ;;                (v:vec3  30  0 100   )
-      ;;                (v:vec3  160 0 180  )
-      ;;                (v:vec3  180 0 100  )
-      ;;                5 red)
-      (b:make-bezier (v:vec3 -1   0 -1)
-                     (v:vec3 -0.8 1 1)
-                     (v:vec3 0.8  -1 1)
-                     (v:vec3 1    0 -1)
-                     0.5 red)
+      (g:make-bvh-node (list
+                        (g:make-sphere (v:vec3 2 0 2) 0.5 red)
+                        (g:make-sphere (v:vec3 -2 0 -2) 0.5 green)
+                        (g:make-sphere (v:vec3 -1 0 -1) 0.1
+                                       blue)
+                        (g:make-sphere (v:vec3 -0.8 1 1) 0.1
+                                       blue)
+                        (g:make-sphere (v:vec3 0.8 -1 1) 0.1
+                                       blue)
+                        (g:make-sphere (v:vec3 1 0 -1) 0.1
+                                       blue)
+                        (b:make-bezier (v:vec3 -1   0 -1)
+                                          (v:vec3 -0.8 1 1)
+                                          (v:vec3 0.8  -1 1)
+                                          (v:vec3 1    0 -1)
+                                          0.1 red)
+                        (b:make-bezier (v:vec3 -1   0 1)
+                                       (v:vec3 -0.8 1 -1)
+                                       (v:vec3 0.8  -1 -1)
+                                       (v:vec3 1    0 1)
+                                       0.1 red)
+                        (b:make-bezier (v:vec3 -1   0 2)
+                                       (v:vec3 -0.8 1 -2)
+                                       (v:vec3 0.8  -1 -2)
+                                       (v:vec3 1    0 2)
+                                       0.1 red))
+                     0 0)
       )
      *camera*
      sky-color)))
 
-;; (define test-bezier-points
+;; (define limitset-scene
 ;;   (let* ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
-;;         (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
-;;         (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
-;;         (blue (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.15 0.45))))
-;;         (bez  (p:bezier->objs (p:points->bezier (p:load-points "points.csv"))
-;;                               0.1 red)))
+;;          (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
+;;          (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
+;;          (blue (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.15 0.45))))
+;;          (bez-list
+;;           (p:bezier->objs (p:points->bezier (p:load-points "2-2.csv" 5))
+;;                           0.1 red)))
 ;;     (g:make-scene
-;;      (apply list
-;;             (g:make-sphere (v:vec3 0 -100.5 -1) 100
-;;                      (m:make-lambertian
-;;                       (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
-;;                                          (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
-
-;;       bez)
+;;      (list
+;;       ;; (g:make-sphere (v:vec3 0 -100.5 -1) 100
+;;       ;;                (m:make-lambertian
+;;       ;;                 (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
+;;       ;;                                    (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
+;;       (g:make-bvh-node bez-list 0 0))
 ;;      *camera*
 ;;      sky-color)))
+
+(define test-bezier-points
+  (let* ((red (m:make-lambertian (t:constant-texture (v:vec3 0.65 0.05 0.05))))
+         (white (m:make-lambertian (t:constant-texture (v:vec3 0.73 0.73 0.73))))
+         (green (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.45 0.15))))
+         (blue (m:make-lambertian (t:constant-texture (v:vec3 0.12 0.15 0.45))))
+         (bez  (p:bezier->objs (p:points->bezier (p:load-points "points.csv" 1))
+                               0.1 red)))
+    (g:make-scene
+     (list
+            (g:make-sphere (v:vec3 0 -100.5 -1) 100
+                     (m:make-lambertian
+                      (t:checker-texture (t:constant-texture (v:vec3 0.2 0.3 0.1))
+                                         (t:constant-texture (v:vec3 0.9 0.9 0.9)))))
+            ;bez
+            (g:make-bvh-node bez 0 0)
+            )
+     *camera*
+     sky-color)))
 
 (define test-scene2
   (let ((per-tex (t:marble-texture 1)))
@@ -392,7 +419,7 @@
 
 (define *rendering?* #f)
 
-(define *scene* test-scene-bvh)
+(define *scene* limitset-scene)
 
 (define (save-as-ppm nx ny)
   (with-output-to-file "test.ppm"
