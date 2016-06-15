@@ -89,12 +89,12 @@
                          (max-vec (v:vec3 (- +max-float+) (- +max-float+) (- +max-float+))))
                     (dotimes (i 4)
                              (dotimes (axis 3)
-                                      (if (< (v:vec3-ref (vector-ref cp i) axis)
-                                             (v:vec3-ref min-vec axis))
-                                          (v:vec3-set! min-vec axis (v:vec3-ref (vector-ref cp i) axis)))
-                                      (if (> (v:vec3-ref (vector-ref cp i) axis)
-                                             (v:vec3-ref max-vec axis))
-                                          (v:vec3-set! max-vec axis (v:vec3-ref (vector-ref cp i) axis)))))
+                                      (v:vec3-set! min-vec axis
+                                                   (min (- (v:vec3-ref (vector-ref cp i) axis) width1)
+                                                        (v:vec3-ref min-vec axis)))
+                                      (v:vec3-set! max-vec axis
+                                                   (max (+ (v:vec3-ref (vector-ref cp i) axis) width1)
+                                                        (v:vec3-ref max-vec axis)))))
                     (g:make-aabb min-vec max-vec)))
             (bezier-transform
              (lambda (mat)
