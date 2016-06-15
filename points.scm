@@ -7,13 +7,14 @@
 
 (select-module points)
 
-(define (load-points file-name)
+(define (load-points file-name magnitude)
   (let ((points '()))
     (with-input-from-file file-name
       (lambda ()
         (port-for-each (lambda (line)
                          (push! points
-                                (apply v:vec3 (map string->number
+                                (apply v:vec3 (map (lambda (p)
+                                                     (* magnitude (string->number p)))
                                                    (string-split line ",")))))
                        read-line)))
     (list->vector (reverse! points))))
